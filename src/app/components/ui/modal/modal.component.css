@@ -1,0 +1,4 @@
+/* Modal custom styles */
+:host {
+  display: contents;
+}

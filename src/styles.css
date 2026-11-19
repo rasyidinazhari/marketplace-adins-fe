@@ -1,3 +1,70 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+
+  html {
+    background-color: #f8fafc;
+    color: #09090b;
+    height: 100%;
+  }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background-color: #f8fafc;
+    color: #09090b;
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
+    @apply antialiased selection:bg-zinc-900 selection:text-white;
+  }
+
+  /* Ensure router-outlet placeholder never takes layout space */
+  router-outlet {
+    display: none !important;
+  }
+
+  app-root {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    width: 100%;
+    flex: 1 1 auto;
+  }
+
+  app-root > :not(router-outlet) {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    width: 100%;
+  }
+}
+
+/* Subtle modern shadow for shadcn cards */
+.shadow-2xs {
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.04);
+}
+
+.shadow-xs {
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.06), 0 1px 2px -1px rgb(0 0 0 / 0.06);
+}
+
+/* Custom scrollbar for modern sleek aesthetic */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}

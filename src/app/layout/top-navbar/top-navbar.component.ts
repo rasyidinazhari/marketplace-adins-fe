@@ -1,13 +1,20 @@
 import { Component } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { CommonModule } from '@angular/common';
+import { RouterLink, RouterLinkActive } from '@angular/router';
 
 @Component({
   selector: 'app-top-navbar',
   standalone: true,
-  imports: [RouterLink],
+  imports: [CommonModule, RouterLink, RouterLinkActive],
   templateUrl: './top-navbar.component.html',
   styleUrl: './top-navbar.component.css'
 })
 export class TopNavbarComponent {
+  isMobileMenuOpen = false;
+  isSellerMenuOpen = false;
+  isUserMenuOpen = false;
 
+  toggleMobileMenu(): void {
+    this.isMobileMenuOpen = !this.isMobileMenuOpen;
+  }
 }

@@ -1,0 +1,31 @@
+<footer
+  class="border-t border-zinc-200/80 bg-white py-5 text-xs text-zinc-500 mt-auto"
+>
+  <div
+    class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3"
+  >
+    <!-- Left: Brand Mini & Copyright -->
+    <div class="flex items-center gap-2 text-center sm:text-left">
+      <img
+        src="assets/warungadins-icon-app.svg"
+        alt="WarungAdins"
+        class="h-4 w-4 object-contain inline-block opacity-80"
+      />
+      <span>© 2026 <strong>WarungAdins</strong>. Hak Cipta Dilindungi.</span>
+    </div>
+
+    <!-- Right: Quick Links & System Status -->
+    <div class="flex items-center gap-4 text-xs flex-wrap justify-center">
+      <a
+        [routerLink]="'/products'"
+        class="hover:text-zinc-950 transition-colors"
+        >Katalog</a
+      >
+      <a href="#" class="hover:text-zinc-950 transition-colors">Bantuan</a>
+      <a href="#" class="hover:text-zinc-950 transition-colors">Privasi</a>
+      <a href="#" class="hover:text-zinc-950 transition-colors">Syarat</a>
+
+      <!-- System Status Pill (Shadcn style) -->
+    </div>
+  </div>
+</footer>

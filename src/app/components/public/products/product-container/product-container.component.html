@@ -1,65 +1,210 @@
-<div class="container mx-auto px-4 py-8">
-    <div class="grid grid-cols-3 gap-4">
-        <a [routerLink]="'/products/1'">
-            <div class="card bg-base-100 w-70 shadow-sm">
-            <figure>
-                <img
-                  src="https://img.daisyui.com/images/stock/photo-1606107557195-0e29a4b5b4aa.webp"
-                  alt="Shoes" />
-              </figure>
-              <div class="card-body">
-                <h2 class="card-title">
-                  Card Title
-                  <div class="badge badge-secondary">NEW</div>
-                </h2>
-                <p>A card component has a figure, a body part, and inside body there are title and actions parts</p>
-                <div class="card-actions justify-end">
-                  <div class="badge badge-outline">Fashion</div>
-                  <div class="badge badge-outline">Products</div>
-                </div>
-              </div>
-            </div>
-        </a>
-        <a [routerLink]="'/products/1'">
-            <div class="card bg-base-100 w-70 shadow-sm">
-            <figure>
-                <img
-                  src="https://img.daisyui.com/images/stock/photo-1606107557195-0e29a4b5b4aa.webp"
-                  alt="Shoes" />
-              </figure>
-              <div class="card-body">
-                <h2 class="card-title">
-                  Card Title
-                  <div class="badge badge-secondary">NEW</div>
-                </h2>
-                <p>A card component has a figure, a body part, and inside body there are title and actions parts</p>
-                <div class="card-actions justify-end">
-                  <div class="badge badge-outline">Fashion</div>
-                  <div class="badge badge-outline">Products</div>
-                </div>
-              </div>
-            </div>
-        </a>
-        <a [routerLink]="'/products/1'">
-            <div class="card bg-base-100 w-70 shadow-sm">
-            <figure>
-                <img
-                  src="https://img.daisyui.com/images/stock/photo-1606107557195-0e29a4b5b4aa.webp"
-                  alt="Shoes" />
-              </figure>
-              <div class="card-body">
-                <h2 class="card-title">
-                  Card Title
-                  <div class="badge badge-secondary">NEW</div>
-                </h2>
-                <p>A card component has a figure, a body part, and inside body there are title and actions parts</p>
-                <div class="card-actions justify-end">
-                  <div class="badge badge-outline">Fashion</div>
-                  <div class="badge badge-outline">Products</div>
-                </div>
-              </div>
-            </div>
-        </a>
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  
+  <!-- Breadcrumb -->
+  <nav class="flex items-center gap-2 text-xs text-zinc-500 mb-6">
+    <a [routerLink]="'/'" class="hover:text-zinc-900 transition-colors">Beranda</a>
+    <span>/</span>
+    <span class="text-zinc-900 font-medium">Katalog Produk</span>
+  </nav>
+
+  <!-- Page Header -->
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-zinc-200">
+    <div>
+      <h1 class="text-2xl font-bold tracking-tight text-zinc-950">Semua Produk</h1>
+      <p class="text-sm text-zinc-500 mt-1">Jelajahi beragam kategori produk berkualitas dengan harga terbaik.</p>
+    </div>
+
+    <!-- Top Bar Filter / Sorter -->
+    <div class="flex items-center gap-3">
+      <span class="text-xs text-zinc-500 whitespace-nowrap hidden sm:inline">Urutkan:</span>
+      <select [(ngModel)]="selectedSort" class="h-9 rounded-md border border-zinc-200 bg-white px-3 py-1 text-xs text-zinc-800 shadow-2xs focus:outline-none focus:ring-1 focus:ring-zinc-950">
+        <option value="popular">Paling Populer</option>
+        <option value="price-asc">Harga: Rendah ke Tinggi</option>
+        <option value="price-desc">Harga: Tinggi ke Rendah</option>
+        <option value="rating">Rating Tertinggi</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Main Content Layout (Sidebar Filter + Product Grid) -->
+  <div class="grid grid-cols-1 lg:grid-cols-4 gap-8 mt-8">
+    
+    <!-- Sidebar Filters (Sticky Shadcn Card) -->
+    <aside class="space-y-6">
+      <div class="lg:sticky lg:top-20 z-10 space-y-6">
+        <div class="rounded-xl border border-zinc-200/80 bg-white p-5 shadow-2xs space-y-6 max-h-[calc(100vh-6rem)] overflow-y-auto">
         
-    </div>        
+        <!-- Filter Header -->
+        <div class="flex items-center justify-between pb-3 border-b border-zinc-100">
+          <div class="flex items-center gap-2 font-semibold text-sm text-zinc-900">
+            <svg class="w-4 h-4 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/></svg>
+            <span>Filter Pencarian</span>
+          </div>
+          <button (click)="resetFilters()" class="text-xs text-zinc-500 hover:text-zinc-950 underline underline-offset-2">
+            Reset
+          </button>
+        </div>
+
+        <!-- Search Input -->
+        <div class="space-y-2">
+          <label class="text-xs font-medium text-zinc-700">Cari Kata Kunci</label>
+          <div class="relative">
+            <input type="text" 
+                   [(ngModel)]="searchQuery" 
+                   placeholder="Nama produk..." 
+                   class="w-full pl-8 pr-3 py-1.5 text-xs rounded-md border border-zinc-200 bg-zinc-50/50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-zinc-950 transition-colors" />
+            <svg class="w-3.5 h-3.5 text-zinc-400 absolute left-2.5 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+          </div>
+        </div>
+
+        <!-- Category Filter -->
+        <div class="space-y-2.5">
+          <label class="text-xs font-semibold text-zinc-900 uppercase tracking-wider">Kategori</label>
+          <div class="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+            @for (cat of categories; track cat) {
+              <label class="flex items-center gap-2 text-xs text-zinc-600 hover:text-zinc-950 cursor-pointer py-0.5">
+                <input type="radio" 
+                       name="category" 
+                       [value]="cat" 
+                       [(ngModel)]="selectedCategory" 
+                       class="rounded border-zinc-300 text-zinc-900 focus:ring-zinc-950 h-3.5 w-3.5" />
+                <span [class.font-semibold]="selectedCategory === cat">{{ cat }}</span>
+              </label>
+            }
+          </div>
+        </div>
+
+        <!-- Price Range Filter -->
+        <div class="space-y-2.5 pt-3 border-t border-zinc-100">
+          <label class="text-xs font-semibold text-zinc-900 uppercase tracking-wider">Rentang Harga (Rp)</label>
+          <div class="grid grid-cols-2 gap-2">
+            <input type="text" placeholder="Min" class="w-full px-2.5 py-1.5 text-xs rounded-md border border-zinc-200 bg-white focus:outline-none focus:ring-1 focus:ring-zinc-950" />
+            <input type="text" placeholder="Max" class="w-full px-2.5 py-1.5 text-xs rounded-md border border-zinc-200 bg-white focus:outline-none focus:ring-1 focus:ring-zinc-950" />
+          </div>
+        </div>
+
+        <!-- Rating Filter -->
+        <div class="space-y-2.5 pt-3 border-t border-zinc-100">
+          <label class="text-xs font-semibold text-zinc-900 uppercase tracking-wider">Rating</label>
+          <div class="space-y-1.5">
+            <label class="flex items-center gap-2 text-xs text-zinc-600 cursor-pointer">
+              <input type="radio" name="rating" [value]="0" [(ngModel)]="selectedRating" class="h-3.5 w-3.5" />
+              <span>Semua Rating</span>
+            </label>
+            <label class="flex items-center gap-2 text-xs text-zinc-600 cursor-pointer">
+              <input type="radio" name="rating" [value]="4" [(ngModel)]="selectedRating" class="h-3.5 w-3.5" />
+              <span class="text-amber-500 font-semibold">★ 4.0 ke atas</span>
+            </label>
+            <label class="flex items-center gap-2 text-xs text-zinc-600 cursor-pointer">
+              <input type="radio" name="rating" [value]="4.8" [(ngModel)]="selectedRating" class="h-3.5 w-3.5" />
+              <span class="text-amber-500 font-semibold">★ 4.8 ke atas</span>
+            </label>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </aside>
+
+    <!-- Product Grid Area -->
+    <div class="lg:col-span-3 space-y-6">
+      
+      <!-- Result stats bar -->
+      <div class="flex items-center justify-between text-xs text-zinc-500">
+        <div>
+          Menampilkan <span class="font-semibold text-zinc-900">{{ filteredProducts.length }}</span> produk untuk 
+          <span class="font-medium text-zinc-800">"{{ selectedCategory }}"</span>
+        </div>
+      </div>
+
+      <!-- Grid -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
+        @for (item of filteredProducts; track item.id) {
+          <div class="group flex flex-col rounded-xl border border-zinc-200/80 bg-white shadow-2xs hover:shadow-md hover:border-zinc-300 transition-all overflow-hidden">
+            
+            <a [routerLink]="['/products', item.id]" class="block">
+              <div class="relative aspect-square w-full overflow-hidden bg-zinc-100">
+                <img [src]="item.image" [alt]="item.name" class="h-full w-full object-cover object-center group-hover:scale-105 transition-transform duration-300" />
+                @if (item.badge) {
+                  <span class="absolute top-2.5 left-2.5 rounded-full bg-zinc-900/90 text-zinc-50 text-[10px] font-medium px-2.5 py-0.5 backdrop-blur-xs shadow-xs">
+                    {{ item.badge }}
+                  </span>
+                }
+              </div>
+            </a>
+
+            <div class="flex flex-1 flex-col p-4">
+              <div class="flex items-center justify-between text-[11px] text-zinc-400 mb-1">
+                <span class="font-medium text-zinc-500">{{ item.category }}</span>
+                <span>{{ item.city }}</span>
+              </div>
+
+              <a [routerLink]="['/products', item.id]">
+                <h3 class="font-medium text-sm text-zinc-900 line-clamp-2 leading-snug group-hover:text-zinc-600 transition-colors">
+                  {{ item.name }}
+                </h3>
+              </a>
+
+              <div class="flex items-center gap-1.5 mt-2 text-xs text-zinc-500">
+                <span class="flex items-center text-amber-500 font-semibold">★ {{ item.rating }}</span>
+                <span class="text-zinc-300">•</span>
+                <span>Terjual {{ item.salesCount }}</span>
+              </div>
+
+              <div class="mt-4 pt-3 border-t border-zinc-100 flex items-center justify-between">
+                <div>
+                  <div class="text-base font-bold text-zinc-950">
+                    Rp {{ item.price | number:'1.0-0' }}
+                  </div>
+                  @if (item.originalPrice) {
+                    <div class="text-[11px] text-zinc-400 line-through">
+                      Rp {{ item.originalPrice | number:'1.0-0' }}
+                    </div>
+                  }
+                </div>
+
+                <a [routerLink]="['/cart']" class="inline-flex items-center justify-center px-3 py-1.5 text-xs font-medium text-zinc-900 bg-zinc-100 hover:bg-zinc-900 hover:text-white rounded-md transition-colors">
+                  + Keranjang
+                </a>
+              </div>
+            </div>
+
+          </div>
+        }
+      </div>
+
+      <!-- Empty state if no products match -->
+      @if (filteredProducts.length === 0) {
+        <div class="text-center py-16 border border-dashed border-zinc-200 rounded-xl bg-white p-8">
+          <svg class="mx-auto h-12 w-12 text-zinc-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          <h3 class="mt-3 text-sm font-semibold text-zinc-900">Produk Tidak Ditemukan</h3>
+          <p class="mt-1 text-xs text-zinc-500">Coba ubah kata kunci pencarian atau sesuaikan filter kategori Anda.</p>
+          <button (click)="resetFilters()" class="mt-4 px-4 py-2 text-xs font-medium text-zinc-50 bg-zinc-900 hover:bg-zinc-800 rounded-md">
+            Reset Semua Filter
+          </button>
+        </div>
+      }
+
+      <!-- Shadcn Style Pagination -->
+      <div class="flex items-center justify-center gap-1 pt-6 border-t border-zinc-200">
+        <button class="px-3 py-1.5 text-xs font-medium text-zinc-600 hover:text-zinc-950 hover:bg-zinc-100 rounded-md border border-zinc-200 transition-colors disabled:opacity-40" disabled>
+          Sebelumnya
+        </button>
+        <button class="px-3 py-1.5 text-xs font-semibold text-white bg-zinc-900 rounded-md shadow-2xs">
+          1
+        </button>
+        <button class="px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-100 rounded-md">
+          2
+        </button>
+        <button class="px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-100 rounded-md">
+          3
+        </button>
+        <button class="px-3 py-1.5 text-xs font-medium text-zinc-600 hover:text-zinc-950 hover:bg-zinc-100 rounded-md border border-zinc-200 transition-colors">
+          Berikutnya
+        </button>
+      </div>
+
+    </div>
+
+  </div>
 </div>

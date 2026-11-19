@@ -1,14 +1,127 @@
-<!-- name of each tab group should be unique -->
-<div class="tabs tabs-lift">
-  <input type="radio" name="my_tabs_3" class="tab" aria-label="Tab 1" />
-  <div class="tab-content bg-base-100 border-base-300 p-6">
-    Elektronik
+<section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+  
+  <!-- Section Header -->
+  <div class="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
+    <div>
+      <div class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-zinc-500">
+        <span class="inline-block w-2 h-2 rounded-full bg-zinc-900"></span>
+        Koleksi Pilihan
+      </div>
+      <h2 class="text-2xl sm:text-3xl font-bold tracking-tight text-zinc-950 mt-1">
+        Rekomendasi Produk Terbaik Minggu Ini
+      </h2>
+      <p class="text-sm text-zinc-500 mt-1">
+        Kurasi penawaran spesial langsung dari para penjual terpercaya.
+      </p>
+    </div>
+
+    <!-- Shadcn-styled Category Tabs -->
+    <div class="inline-flex items-center rounded-lg bg-zinc-100 p-1 text-zinc-600 border border-zinc-200/60 overflow-x-auto max-w-full">
+      @for (cat of categories; track cat) {
+        <button 
+          (click)="selectCategory(cat)"
+          [class.bg-white]="selectedCategory === cat"
+          [class.text-zinc-950]="selectedCategory === cat"
+          [class.shadow-2xs]="selectedCategory === cat"
+          [class.font-semibold]="selectedCategory === cat"
+          class="px-3.5 py-1.5 text-xs font-medium rounded-md transition-all whitespace-nowrap hover:text-zinc-950">
+          {{ cat }}
+        </button>
+      }
+    </div>
   </div>
 
-  <input type="radio" name="my_tabs_3" class="tab" aria-label="Tab 2" checked="checked" />
-  <div class="tab-content bg-base-100 border-base-300 p-6">
-    Fashion
+  <!-- Product Cards Grid (Responsive, Clean Borders, Shadcn Card aesthetic) -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+    @for (product of filteredProducts; track product.id) {
+      <div class="group relative flex flex-col rounded-xl border border-zinc-200/80 bg-white shadow-2xs hover:shadow-md hover:border-zinc-300 transition-all duration-200 overflow-hidden">
+        
+        <!-- Image & Badge Container -->
+        <div class="relative aspect-square w-full overflow-hidden bg-zinc-100">
+          <img 
+            [src]="product.image" 
+            [alt]="product.name" 
+            class="h-full w-full object-cover object-center group-hover:scale-105 transition-transform duration-300" 
+            loading="lazy" />
+          
+          @if (product.badge) {
+            <span class="absolute top-2.5 left-2.5 rounded-full bg-zinc-900/90 text-zinc-50 text-[10px] font-medium px-2.5 py-0.5 backdrop-blur-xs shadow-xs">
+              {{ product.badge }}
+            </span>
+          }
+
+          <!-- Quick Action Button Overlay -->
+          <div class="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+            <a [routerLink]="['/products', product.id]" class="p-2 rounded-lg bg-white/95 text-zinc-900 shadow-md hover:bg-zinc-900 hover:text-white transition-colors inline-flex items-center justify-center" title="Lihat Detail">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+            </a>
+          </div>
+        </div>
+
+        <!-- Card Content -->
+        <div class="flex flex-1 flex-col p-4">
+          <!-- Category & Store -->
+          <div class="flex items-center justify-between text-xs text-zinc-500 mb-1">
+            <span class="font-medium text-zinc-400">{{ product.category }}</span>
+            <span class="truncate max-w-[120px]">{{ product.store }}</span>
+          </div>
+
+          <!-- Product Name -->
+          <a [routerLink]="['/products', product.id]">
+            <h3 class="font-medium text-sm text-zinc-900 line-clamp-2 leading-snug group-hover:text-zinc-600 transition-colors">
+              {{ product.name }}
+            </h3>
+          </a>
+
+          <!-- Rating & Sales -->
+          <div class="flex items-center gap-1.5 mt-2 text-xs text-zinc-500">
+            <span class="flex items-center text-amber-500 font-semibold">
+              ★ {{ product.rating }}
+            </span>
+            <span class="text-zinc-300">•</span>
+            <span>Terjual {{ product.salesCount }}</span>
+          </div>
+
+          <!-- Price & CTA -->
+          <div class="mt-4 pt-3 border-t border-zinc-100 flex items-center justify-between">
+            <div>
+              <div class="text-base font-bold text-zinc-950">
+                Rp {{ product.price | number:'1.0-0' }}
+              </div>
+              @if (product.originalPrice) {
+                <div class="text-xs text-zinc-400 line-through">
+                  Rp {{ product.originalPrice | number:'1.0-0' }}
+                </div>
+              }
+            </div>
+
+            <a [routerLink]="['/cart']" 
+               class="inline-flex items-center justify-center px-3 py-1.5 text-xs font-medium text-zinc-900 bg-zinc-100 hover:bg-zinc-900 hover:text-white rounded-md transition-colors">
+              + Keranjang
+            </a>
+          </div>
+        </div>
+
+      </div>
+    }
   </div>
-  <input type="radio" name="my_tabs_3" class="tab" aria-label="Tab 3" />
-  <div class="tab-content bg-base-100 border-base-300 p-6">Aksesoris</div>
-</div>
+
+  <!-- Bottom CTA Banner / Voucher Promo -->
+  <div class="mt-16 rounded-2xl border border-zinc-200 bg-gradient-to-r from-zinc-900 to-zinc-800 p-8 text-zinc-50 shadow-sm flex flex-col md:flex-row items-center justify-between gap-6">
+    <div class="space-y-2 text-center md:text-left">
+      <div class="inline-flex items-center gap-2 rounded-full bg-zinc-800 px-3 py-0.5 text-xs text-zinc-300 border border-zinc-700">
+        Diskon Pengguna Baru
+      </div>
+      <h3 class="text-2xl font-bold tracking-tight">Klaim Kupon Diskon s/d Rp 50.000</h3>
+      <p class="text-sm text-zinc-400 max-w-xl">
+        Gunakan kode voucher <span class="font-mono font-semibold text-white bg-zinc-700/80 px-2 py-0.5 rounded">WARUNGADINS50</span> pada saat proses checkout pesanan pertama Anda.
+      </p>
+    </div>
+    <div class="flex items-center gap-3">
+      <a [routerLink]="'/register'" class="px-5 py-2.5 rounded-md bg-white text-zinc-950 hover:bg-zinc-100 text-sm font-semibold shadow-xs transition-colors">
+        Daftar & Klaim
+      </a>
+    </div>
+  </div>
+
+</section>

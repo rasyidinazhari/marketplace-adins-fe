@@ -1,12 +1,106 @@
-<div class="hero bg-base-200 min-h-screen">
-  <div class="hero-content text-center">
-    <div class="max-w-md">
-      <h1 class="text-5xl font-bold">Hello there</h1>
-      <p class="py-6">
-        Provident cupiditate voluptatem et in. Quaerat fugiat ut assumenda excepturi exercitationem
-        quasi. In deleniti eaque aut repudiandae et a id nisi.
-      </p>
-      <button class="btn btn-primary">Get Started</button>
+<section
+  class="relative overflow-hidden border-b border-zinc-200/80 bg-gradient-to-b from-white via-zinc-50/50 to-zinc-100/40 py-16 sm:py-24"
+>
+  <!-- Subtle background grid pattern -->
+  <div
+    class="absolute inset-0 bg-[linear-gradient(to_right,#e4e4e7_1px,transparent_1px),linear-gradient(to_bottom,#e4e4e7_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] opacity-35"
+  ></div>
+
+  <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+    <!-- Announcement Badge -->
+
+    <!-- Main Headline -->
+    <h1
+      class="text-4xl sm:text-6xl font-extrabold tracking-tight text-zinc-950 max-w-4xl mx-auto leading-[1.15]"
+    >
+      Belanja & Jualan Mudah dalam Satu Ekosistem Modern
+    </h1>
+
+    <!-- Subtitle -->
+    <p
+      class="mt-6 text-base sm:text-lg text-zinc-600 max-w-2xl mx-auto leading-relaxed"
+    >
+      Temukan ribuan produk terkurasi, jaminan transaksi aman, dan kemudahan
+      bagi seller untuk mengembangkan bisnis retail dengan cepat.
+    </p>
+
+    <!-- CTAs -->
+    <div class="mt-8 flex flex-wrap items-center justify-center gap-3">
+      <a
+        [routerLink]="'/products'"
+        class="inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-medium text-zinc-50 bg-zinc-900 hover:bg-zinc-800 rounded-md shadow-sm transition-all hover:scale-[1.01] active:scale-[0.99]"
+      >
+        <span>Mulai Belanja</span>
+        <svg
+          class="w-4 h-4"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M14 5l7 7m0 0l-7 7m7-7H3"
+          />
+        </svg>
+      </a>
+
+      <a
+        [routerLink]="'/seller/products'"
+        class="inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-medium text-zinc-900 bg-white hover:bg-zinc-50 rounded-md border border-zinc-200/90 shadow-2xs transition-all hover:scale-[1.01] active:scale-[0.99]"
+      >
+        <svg
+          class="w-4 h-4 text-zinc-500"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+          />
+        </svg>
+        <span>Masuk Dashboard Seller</span>
+      </a>
+    </div>
+
+    <!-- Feature highlights bar -->
+    <div
+      class="mt-16 grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto text-left"
+    >
+      <div
+        class="p-4 rounded-xl border border-zinc-200/80 bg-white/80 shadow-2xs"
+      >
+        <div class="text-xs font-medium text-zinc-500">Katalog Produk</div>
+        <div class="text-xl font-bold text-zinc-900 mt-1">10,000+</div>
+        <div class="text-xs text-zinc-500 mt-0.5">
+          Produk aktif & terverifikasi
+        </div>
+      </div>
+      <div
+        class="p-4 rounded-xl border border-zinc-200/80 bg-white/80 shadow-2xs"
+      >
+        <div class="text-xs font-medium text-zinc-500">Seller Aktif</div>
+        <div class="text-xl font-bold text-zinc-900 mt-1">1,200+</div>
+        <div class="text-xs text-zinc-500 mt-0.5">UMKM & Brand Resmi</div>
+      </div>
+      <div
+        class="p-4 rounded-xl border border-zinc-200/80 bg-white/80 shadow-2xs"
+      >
+        <div class="text-xs font-medium text-zinc-500">Keamanan Transaksi</div>
+        <div class="text-xl font-bold text-zinc-900 mt-1">100% Safe</div>
+        <div class="text-xs text-zinc-500 mt-0.5">Escrow & Garansi Retur</div>
+      </div>
+      <div
+        class="p-4 rounded-xl border border-zinc-200/80 bg-white/80 shadow-2xs"
+      >
+        <div class="text-xs font-medium text-zinc-500">Ekspedisi Logistik</div>
+        <div class="text-xl font-bold text-zinc-900 mt-1">Instan & Reguler</div>
+        <div class="text-xs text-zinc-500 mt-0.5">Kirim se-Indonesia</div>
+      </div>
     </div>
   </div>
-</div>
+</section>
