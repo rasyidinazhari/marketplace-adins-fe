@@ -1,0 +1,28 @@
+<div class="navbar bg-base-100 shadow-sm">
+  <div class="navbar-start">
+    <a [routerLink]="'/'" class="text-xl">
+        <img src="assets/adinspedia-wordmark.svg" alt="Logo" class="h-8 w-auto">
+    </a>
+  </div>
+  <div class="navbar-center hidden lg:flex">
+    <ul class="menu menu-horizontal px-1">
+      <li><a [routerLink]="'/'">Home</a></li>
+      <li>
+        <details>
+          <summary>Category</summary>
+          <ul class="p-2 bg-base-100 w-40 z-1">
+            <li><a>Submenu 1</a></li>
+            <li><a>Submenu 2</a></li>
+          </ul>
+        </details>
+      </li>
+      <li><a [routerLink]="'/products'">Products</a></li>
+    </ul>
+  </div>
+  <div>
+    <a [routerLink]="'/login'" class="btn bg-white text-black border-[#e5e5e5]">
+        <svg aria-label="Email icon" width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><g stroke-linejoin="round" stroke-linecap="round" stroke-width="2" fill="none" stroke="black"><rect width="20" height="16" x="2" y="4" rx="2"></rect><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path></g></svg>
+        Login with Email
+    </a>
+</div>
+</div>
