@@ -40,6 +40,7 @@ export class LoginComponent {
       .submitLogin({
         email: inputUserAuth.email ?? '',
         password: inputUserAuth.password ?? '',
+        role: 'Buyer'
       })
       .subscribe((response: any) => {
         console.log(response);

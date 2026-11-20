@@ -6,7 +6,8 @@ import { ProductsComponent } from './pages/public/products/products.component';
 import { PublicProductDetailComponent } from './pages/public/product-detail/product-detail.component';
 
 // Auth Pages
-import { LoginComponent } from './pages/auth/login/login.component';
+import { BuyerLoginComponent } from './pages/buyer/buyer-login/buyer-login.component';
+import { SellerLoginComponent } from './pages/seller/seller-login/seller-login.component';
 import { RegisterComponent } from './pages/auth/register/register.component';
 
 // Buyer Pages
@@ -43,11 +44,21 @@ export const routes: Routes = [
     title: 'Detail Produk - WarungAdins'
   },
 
-  // Auth
+  // Auth / Role Logins
+  {
+    path: 'buyer/login',
+    component: BuyerLoginComponent,
+    title: 'Masuk Akun Pembeli - WarungAdins'
+  },
+  {
+    path: 'seller/login',
+    component: SellerLoginComponent,
+    title: 'Portal Mitra Penjual - WarungAdins'
+  },
   {
     path: 'login',
-    component: LoginComponent,
-    title: 'Masuk Akun - WarungAdins'
+    redirectTo: 'buyer/login',
+    pathMatch: 'full'
   },
   {
     path: 'register',

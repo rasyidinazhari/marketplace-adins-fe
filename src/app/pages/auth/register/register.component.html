@@ -130,7 +130,7 @@
     <!-- Footer Login link -->
     <div class="mt-6 text-center text-xs text-zinc-500 pt-5 border-t border-zinc-100">
       Sudah memiliki akun? 
-      <a [routerLink]="'/login'" class="font-semibold text-zinc-950 hover:underline">
+      <a [routerLink]="role === 'seller' ? '/seller/login' : '/buyer/login'" class="font-semibold text-zinc-950 hover:underline">
         Masuk di sini
       </a>
     </div>
