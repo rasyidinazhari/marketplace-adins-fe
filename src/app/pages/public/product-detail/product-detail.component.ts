@@ -1,9 +1,10 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink, Router, ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { TopNavbarComponent } from '../../../layout/top-navbar/top-navbar.component';
 import { CompactFooterComponent } from '../../../layout/compact-footer/compact-footer.component';
+import { ProductService } from '../../../services/product/product.service';
 
 export interface ProductDetailData {
   id: number;
@@ -51,7 +52,11 @@ export interface ProductDetailData {
   templateUrl: './product-detail.component.html',
   styleUrl: './product-detail.component.css'
 })
-export class PublicProductDetailComponent {
+export class PublicProductDetailComponent implements OnInit {
+  private router = inject(Router);
+  private route = inject(ActivatedRoute);
+  private productSvc = inject(ProductService);
+
   selectedImageIndex = 0;
   selectedColor = 'Midnight Black';
   quantity = 1;
@@ -180,7 +185,37 @@ export class PublicProductDetailComponent {
     }
   ];
 
-  constructor(private router: Router, private route: ActivatedRoute) {}
+  ngOnInit(): void {
+    const id = this.route.snapshot.paramMap.get('id');
+    if (id) {
+      this.loadProduct(Number(id));
+    }
+  }
+
+  loadProduct(id: number): void {
+    this.productSvc.getProductById(id).subscribe({
+      next: (data) => {
+        if (data) {
+          this.product.id = data.id;
+          this.product.name = data.productName;
+          this.product.price = data.productPrice;
+          this.product.stock = data.productStock;
+          this.product.category = data.categories?.[0]?.categoryName || 
+            data.productCategories?.[0]?.category?.categoryName || 
+            'Elektronik';
+          this.product.store.name = data.store?.storeName || data.storeName || 'Adins Official Store';
+          if (data.productDescription) {
+            this.product.description = [data.productDescription];
+          }
+          this.product.images = [this.productSvc.getProductImage(data)];
+          this.selectedImageIndex = 0;
+        }
+      },
+      error: (err) => {
+        console.warn('Gagal memuat produk dari API, fallback ke default detail:', err);
+      }
+    });
+  }
 
   get currentImage(): string {
     return this.product.images[this.selectedImageIndex];

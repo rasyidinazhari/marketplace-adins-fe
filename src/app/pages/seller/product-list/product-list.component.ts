@@ -1,9 +1,9 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { TopNavbarComponent } from '../../../layout/top-navbar/top-navbar.component';
-import { CompactFooterComponent } from '../../../layout/compact-footer/compact-footer.component';
+import { ProductService } from '../../../services/product/product.service';
+import { BackendProduct } from '../../../models/product.model';
 
 export interface SellerProduct {
   id: number;
@@ -21,17 +21,21 @@ export interface SellerProduct {
 @Component({
   selector: 'app-product-list',
   standalone: true,
-  imports: [CommonModule, RouterLink, FormsModule, TopNavbarComponent, CompactFooterComponent],
+  imports: [CommonModule, RouterLink, FormsModule],
   templateUrl: './product-list.component.html',
   styleUrl: './product-list.component.css'
 })
-export class ProductListComponent {
+export class ProductListComponent implements OnInit {
+  private productSvc = inject(ProductService);
+
   searchQuery = '';
   selectedCategory = 'Semua';
+  isLoading = false;
 
-  categories = ['Semua', 'Elektronik', 'Fashion', 'F&B', 'Aksesoris'];
+  categories = ['Semua', 'Elektronik', 'Fashion', 'F&B', 'Aksesoris', 'Umum'];
 
-  products: SellerProduct[] = [
+  // Default fallback produk jika backend offline / kosong
+  private mockFallbackProducts: SellerProduct[] = [
     {
       id: 1,
       name: 'Wireless Noise-Cancelling Headphones Pro ANC',
@@ -41,7 +45,7 @@ export class ProductListComponent {
       stock: 35,
       status: 'Aktif',
       salesCount: 320,
-      image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600&auto=format&fit=crop&q=80'
+      image: this.productSvc.defaultPlaceholder
     },
     {
       id: 2,
@@ -52,7 +56,7 @@ export class ProductListComponent {
       stock: 12,
       status: 'Aktif',
       salesCount: 154,
-      image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&auto=format&fit=crop&q=80'
+      image: this.productSvc.defaultPlaceholder
     },
     {
       id: 3,
@@ -63,7 +67,7 @@ export class ProductListComponent {
       stock: 3,
       status: 'Aktif',
       salesCount: 88,
-      image: 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=600&auto=format&fit=crop&q=80'
+      image: this.productSvc.defaultPlaceholder
     },
     {
       id: 4,
@@ -74,7 +78,7 @@ export class ProductListComponent {
       stock: 0,
       status: 'Habis',
       salesCount: 210,
-      image: 'https://images.unsplash.com/photo-1587829741301-dc798b83add3?w=600&auto=format&fit=crop&q=80'
+      image: this.productSvc.defaultPlaceholder
     },
     {
       id: 5,
@@ -85,21 +89,98 @@ export class ProductListComponent {
       stock: 45,
       status: 'Aktif',
       salesCount: 450,
-      image: 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?w=600&auto=format&fit=crop&q=80'
+      image: this.productSvc.defaultPlaceholder
     }
   ];
+
+  products: SellerProduct[] = [...this.mockFallbackProducts];
+
+  ngOnInit(): void {
+    this.loadProducts();
+  }
+
+  loadProducts(): void {
+    this.isLoading = true;
+    this.productSvc.getProducts().subscribe({
+      next: (apiProducts: BackendProduct[]) => {
+        this.isLoading = false;
+        if (apiProducts && Array.isArray(apiProducts) && apiProducts.length > 0) {
+          this.products = apiProducts.map(p => this.mapBackendToSellerProduct(p));
+        } else {
+          // Tetap gunakan fallback jika database backend belum memiliki data
+          this.products = [...this.mockFallbackProducts];
+        }
+      },
+      error: (err) => {
+        this.isLoading = false;
+        console.warn('API error / offline, menggunakan mock data:', err);
+        this.products = [...this.mockFallbackProducts];
+      }
+    });
+  }
+
+  private mapBackendToSellerProduct(p: BackendProduct): SellerProduct {
+    const categoryName = p.categories?.[0]?.categoryName || 
+      p.productCategories?.[0]?.category?.categoryName || 
+      'Umum';
+
+    let status: 'Aktif' | 'Draft' | 'Habis' = 'Aktif';
+    if (p.productStock === 0) {
+      status = 'Habis';
+    } else if (p.isActive === false) {
+      status = 'Draft';
+    }
+
+    return {
+      id: p.id,
+      name: p.productName,
+      sku: `SKU-${p.id.toString().padStart(4, '0')}`,
+      category: categoryName,
+      price: p.productPrice,
+      stock: p.productStock,
+      status,
+      salesCount: 0,
+      image: this.productSvc.getProductImage(p)
+    };
+  }
 
   get filteredProducts(): SellerProduct[] {
     return this.products.filter(p => {
       const matchCat = this.selectedCategory === 'Semua' || p.category === this.selectedCategory;
-      const matchSearch = !this.searchQuery || p.name.toLowerCase().includes(this.searchQuery.toLowerCase()) || p.sku.toLowerCase().includes(this.searchQuery.toLowerCase());
+      const matchSearch = !this.searchQuery || 
+        p.name.toLowerCase().includes(this.searchQuery.toLowerCase()) || 
+        p.sku.toLowerCase().includes(this.searchQuery.toLowerCase());
       return matchCat && matchSearch;
     });
   }
 
+  get totalProducts(): number {
+    return this.products.length;
+  }
+
+  get activeProducts(): number {
+    return this.products.filter(p => p.status === 'Aktif').length;
+  }
+
+  get lowStockProducts(): number {
+    return this.products.filter(p => p.stock > 0 && p.stock <= 5).length;
+  }
+
+  get totalSales(): number {
+    return this.products.reduce((acc, p) => acc + (p.salesCount || 0), 0);
+  }
+
   deleteProduct(id: number): void {
     if (confirm('Apakah Anda yakin ingin menghapus produk ini dari toko?')) {
-      this.products = this.products.filter(p => p.id !== id);
+      this.productSvc.deleteProduct(id).subscribe({
+        next: () => {
+          this.products = this.products.filter(p => p.id !== id);
+        },
+        error: (err) => {
+          console.warn('Delete via API error, updating local state:', err);
+          this.products = this.products.filter(p => p.id !== id);
+        }
+      });
     }
   }
 

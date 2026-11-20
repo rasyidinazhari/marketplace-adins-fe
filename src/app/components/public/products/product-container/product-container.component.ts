@@ -1,7 +1,9 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { ProductService } from '../../../../services/product/product.service';
+import { BackendProduct } from '../../../../models/product.model';
 
 export interface CatalogProduct {
   id: number;
@@ -24,15 +26,20 @@ export interface CatalogProduct {
   templateUrl: './product-container.component.html',
   styleUrl: './product-container.component.css'
 })
-export class ProductContainerComponent {
+export class ProductContainerComponent implements OnInit {
+  private productSvc = inject(ProductService);
+
   searchQuery = '';
   selectedCategory = 'Semua';
   selectedSort = 'popular';
   selectedRating = 0;
+  isLoading = false;
+  apiErrorMessage = '';
+  hasApiConnected = false;
 
   categories = ['Semua', 'Elektronik', 'Fashion', 'F&B', 'Aksesoris', 'Perlengkapan Rumah'];
 
-  allProducts: CatalogProduct[] = [
+  private mockFallbackProducts: CatalogProduct[] = [
     {
       id: 1,
       name: 'Wireless Noise-Cancelling Headphones Pro ANC',
@@ -44,7 +51,7 @@ export class ProductContainerComponent {
       store: 'Adins Audio Store',
       city: 'Jakarta Selatan',
       badge: 'Diskon 25%',
-      image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600&auto=format&fit=crop&q=80'
+      image: this.productSvc.defaultPlaceholder
     },
     {
       id: 2,
@@ -56,7 +63,7 @@ export class ProductContainerComponent {
       store: 'Gadget Official',
       city: 'Bandung',
       badge: 'Terlaris',
-      image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&auto=format&fit=crop&q=80'
+      image: this.productSvc.defaultPlaceholder
     },
     {
       id: 3,
@@ -69,7 +76,7 @@ export class ProductContainerComponent {
       store: 'Urban Style House',
       city: 'Jakarta Barat',
       badge: 'Best Seller',
-      image: 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=600&auto=format&fit=crop&q=80'
+      image: this.productSvc.defaultPlaceholder
     },
     {
       id: 4,
@@ -81,7 +88,7 @@ export class ProductContainerComponent {
       store: 'Kopi Nusantara',
       city: 'Medan',
       badge: 'Official',
-      image: 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?w=600&auto=format&fit=crop&q=80'
+      image: this.productSvc.defaultPlaceholder
     },
     {
       id: 5,
@@ -94,7 +101,7 @@ export class ProductContainerComponent {
       store: 'Keycraft ID',
       city: 'Surabaya',
       badge: 'Pilihan Editor',
-      image: 'https://images.unsplash.com/photo-1587829741301-dc798b83add3?w=600&auto=format&fit=crop&q=80'
+      image: this.productSvc.defaultPlaceholder
     },
     {
       id: 6,
@@ -105,7 +112,7 @@ export class ProductContainerComponent {
       salesCount: 119,
       store: 'Artisan Leather',
       city: 'Yogyakarta',
-      image: 'https://images.unsplash.com/photo-1627123424574-724758594e93?w=600&auto=format&fit=crop&q=80'
+      image: this.productSvc.defaultPlaceholder
     },
     {
       id: 7,
@@ -117,7 +124,7 @@ export class ProductContainerComponent {
       store: 'Daily Essentials',
       city: 'Tangerang',
       badge: 'Baru',
-      image: 'https://images.unsplash.com/photo-1544816155-12df9643f363?w=600&auto=format&fit=crop&q=80'
+      image: this.productSvc.defaultPlaceholder
     },
     {
       id: 8,
@@ -130,7 +137,7 @@ export class ProductContainerComponent {
       store: 'Eco Living',
       city: 'Semarang',
       badge: 'Diskon 23%',
-      image: 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=600&auto=format&fit=crop&q=80'
+      image: this.productSvc.defaultPlaceholder
     },
     {
       id: 9,
@@ -141,7 +148,7 @@ export class ProductContainerComponent {
       salesCount: 140,
       store: 'Home Atelier',
       city: 'Bali',
-      image: 'https://images.unsplash.com/photo-1517256064527-09c73fc73e38?w=600&auto=format&fit=crop&q=80'
+      image: this.productSvc.defaultPlaceholder
     },
     {
       id: 10,
@@ -154,7 +161,7 @@ export class ProductContainerComponent {
       store: 'Zen Living',
       city: 'Jakarta Pusat',
       badge: 'Promo',
-      image: 'https://images.unsplash.com/photo-1608571423902-eed4a5ad8108?w=600&auto=format&fit=crop&q=80'
+      image: this.productSvc.defaultPlaceholder
     },
     {
       id: 11,
@@ -165,7 +172,7 @@ export class ProductContainerComponent {
       salesCount: 52,
       store: 'Breeze Studio',
       city: 'Bandung',
-      image: 'https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=600&auto=format&fit=crop&q=80'
+      image: this.productSvc.defaultPlaceholder
     },
     {
       id: 12,
@@ -177,17 +184,87 @@ export class ProductContainerComponent {
       store: 'Tea & Co',
       city: 'Jakarta Selatan',
       badge: 'Impor',
-      image: 'https://images.unsplash.com/photo-1536256263959-770b48d82b0a?w=600&auto=format&fit=crop&q=80'
+      image: this.productSvc.defaultPlaceholder
     }
   ];
 
+  allProducts: CatalogProduct[] = [];
+
+  ngOnInit(): void {
+    this.loadProducts();
+  }
+
+  loadProducts(): void {
+    this.isLoading = true;
+    this.apiErrorMessage = '';
+
+    this.productSvc.getProducts(this.searchQuery).subscribe({
+      next: (apiProducts: BackendProduct[]) => {
+        this.isLoading = false;
+        this.hasApiConnected = true;
+
+        if (apiProducts && Array.isArray(apiProducts) && apiProducts.length > 0) {
+          this.allProducts = apiProducts.map(p => this.mapBackendToCatalog(p));
+        } else if (apiProducts && Array.isArray(apiProducts) && apiProducts.length === 0) {
+          this.allProducts = [];
+        } else {
+          // Jika backend merespons null (misalnya belum ada seed data di DB),
+          // gunakan data mock agar halaman tetap interaktif sambil menandai status API
+          this.allProducts = [...this.mockFallbackProducts];
+        }
+      },
+      error: (err) => {
+        this.isLoading = false;
+        this.hasApiConnected = false;
+        this.apiErrorMessage = 'Tidak dapat menghubungi backend API (/api/products). Menampilkan data katalog demo.';
+        console.warn('API getProducts error / server offline:', err);
+        this.allProducts = [...this.mockFallbackProducts];
+      }
+    });
+  }
+
+  trackByProductId(index: number, item: CatalogProduct): number {
+    return item.id;
+  }
+
+  private mapBackendToCatalog(p: BackendProduct): CatalogProduct {
+    const categoryName = p.categories?.[0]?.categoryName || 
+      p.productCategories?.[0]?.category?.categoryName || 
+      'Elektronik';
+
+    return {
+      id: p.id,
+      name: p.productName,
+      category: categoryName,
+      price: p.productPrice,
+      originalPrice: undefined,
+      rating: 4.9,
+      salesCount: 12,
+      store: p.store?.storeName || p.storeName || 'Adins Official Store',
+      city: 'Jakarta',
+      badge: p.productStock <= 5 ? 'Stok Terbatas' : undefined,
+      image: this.productSvc.getProductImage(p)
+    };
+  }
+
   get filteredProducts(): CatalogProduct[] {
-    return this.allProducts.filter(p => {
-      const matchCat = this.selectedCategory === 'Semua' || p.category === this.selectedCategory;
+    const result = this.allProducts.filter(p => {
+      const matchCat = this.selectedCategory === 'Semua' || p.category.toLowerCase() === this.selectedCategory.toLowerCase();
       const matchSearch = !this.searchQuery || p.name.toLowerCase().includes(this.searchQuery.toLowerCase());
       const matchRating = this.selectedRating === 0 || p.rating >= this.selectedRating;
       return matchCat && matchSearch && matchRating;
     });
+
+    // Sorting
+    if (this.selectedSort === 'price-asc') {
+      return result.sort((a, b) => a.price - b.price);
+    } else if (this.selectedSort === 'price-desc') {
+      return result.sort((a, b) => b.price - a.price);
+    } else if (this.selectedSort === 'rating') {
+      return result.sort((a, b) => b.rating - a.rating);
+    }
+
+    return result;
   }
 
   resetFilters(): void {
@@ -195,5 +272,6 @@ export class ProductContainerComponent {
     this.selectedCategory = 'Semua';
     this.selectedSort = 'popular';
     this.selectedRating = 0;
+    this.loadProducts();
   }
 }

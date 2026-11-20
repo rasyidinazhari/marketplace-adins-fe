@@ -54,6 +54,9 @@ export class BuyerLoginComponent {
         if (response && response.token) {
           this.authSvc.setToken(response.token);
         }
+        if (response && response.user) {
+          this.authSvc.setUser(response.user);
+        }
         this.router.navigate(['/']);
       },
       error: (err: any) => {
@@ -61,6 +64,12 @@ export class BuyerLoginComponent {
         setTimeout(() => {
           this.isLoading = false;
           this.authSvc.setToken('dummy_buyer_jwt_token_warungadins');
+          this.authSvc.setUser({
+            id: 2,
+            name: 'Pembeli Setia',
+            email: payload.email || 'buyer@adins.co.id',
+            role: 'Buyer'
+          });
           this.router.navigate(['/']);
         }, 600);
       },

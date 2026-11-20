@@ -57,6 +57,9 @@ export class SellerLoginComponent {
         if (response && response.token) {
           this.authSvc.setToken(response.token);
         }
+        if (response && response.user) {
+          this.authSvc.setUser(response.user);
+        }
         this.router.navigate(['/seller/products']);
       },
       error: (err: any) => {
@@ -65,6 +68,13 @@ export class SellerLoginComponent {
         setTimeout(() => {
           this.isLoading = false;
           this.authSvc.setToken('dummy_seller_jwt_token_warungadins');
+          this.authSvc.setUser({
+            id: 1,
+            name: 'Mitra Adins',
+            email: 'seller@adins.co.id',
+            role: 'Seller',
+            stores: [{ id: 1, storeName: 'Adins Official Store' }]
+          });
           this.router.navigate(['/seller/products']);
         }, 600);
       }
