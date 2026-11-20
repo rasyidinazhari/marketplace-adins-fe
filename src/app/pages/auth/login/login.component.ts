@@ -1,7 +1,13 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink, Router } from '@angular/router';
-import { FormBuilder, FormsModule, Validators } from '@angular/forms';
+import {
+  FormBuilder,
+  FormsModule,
+  Validators,
+  FormGroup,
+  ReactiveFormsModule,
+} from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { LoginService } from '../../../services/login/login.service';
 import { AuthService } from '../../../services/auth/auth.service';
@@ -9,15 +15,18 @@ import { AuthService } from '../../../services/auth/auth.service';
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, RouterLink, FormsModule],
+  imports: [CommonModule, RouterLink, ReactiveFormsModule],
   templateUrl: './login.component.html',
   styleUrl: './login.component.css',
 })
 export class LoginComponent {
+  constructor(private router: Router) {}
   fb = inject(FormBuilder);
   http = inject(HttpClient);
   loginSvc = inject(LoginService);
   authSvc = inject(AuthService);
+  rememberMe = false;
+  isLoading = false;
 
   loginForm = this.fb.group({
     email: ['', [Validators.required, Validators.email]],
@@ -33,7 +42,7 @@ export class LoginComponent {
         password: inputUserAuth.password ?? '',
       })
       .subscribe((response: any) => {
-        // console.log(response);
+        console.log(response);
         this.authSvc.setToken(response.token); // Handle successful login
       });
   }
