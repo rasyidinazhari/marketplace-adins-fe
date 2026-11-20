@@ -1,51 +1,73 @@
 <app-top-navbar></app-top-navbar>
 
 <main class="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
-  
   <!-- Breadcrumb Navigation -->
   <nav class="flex items-center gap-2 text-xs text-zinc-500 mb-6 flex-wrap">
-    <a [routerLink]="'/'" class="hover:text-zinc-900 transition-colors">Beranda</a>
+    <a [routerLink]="'/'" class="hover:text-zinc-900 transition-colors"
+      >Beranda</a
+    >
     <span>/</span>
-    <a [routerLink]="'/products'" class="hover:text-zinc-900 transition-colors">Katalog Produk</a>
+    <a [routerLink]="'/products'" class="hover:text-zinc-900 transition-colors"
+      >Katalog Produk</a
+    >
     <span>/</span>
-    <span class="hover:text-zinc-900 transition-colors">{{ product.category }}</span>
+    <span class="hover:text-zinc-900 transition-colors">{{
+      product.category
+    }}</span>
     <span>/</span>
-    <span class="text-zinc-950 font-medium truncate max-w-xs">{{ product.name }}</span>
+    <span class="text-zinc-950 font-medium truncate max-w-xs">{{
+      product.name
+    }}</span>
   </nav>
 
   <!-- Top Showcase Section (2-Column Grid) -->
   <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10">
-    
     <!-- Left Column: Gallery & Visuals (5 cols) -->
     <div class="lg:col-span-5 space-y-4">
-      
       <!-- Main High-Res Image Card -->
-      <div class="relative aspect-square w-full rounded-2xl border border-zinc-200/90 bg-white shadow-2xs overflow-hidden flex items-center justify-center p-2 group">
-        <img [src]="currentImage" 
-             [alt]="product.name" 
-             class="h-full w-full object-cover rounded-xl group-hover:scale-105 transition-transform duration-300" />
-        
+      <div
+        class="relative aspect-square w-full rounded-2xl border border-zinc-200/90 bg-white shadow-2xs overflow-hidden flex items-center justify-center p-2 group"
+      >
+        <img
+          [src]="currentImage"
+          [alt]="product.name"
+          class="h-full w-full object-cover rounded-xl group-hover:scale-105 transition-transform duration-300"
+        />
+
         <!-- Badges on Main Image -->
         <div class="absolute top-4 left-4 flex flex-col gap-1.5 items-start">
-          <span class="rounded-full bg-zinc-900 text-white text-[11px] font-semibold px-3 py-1 shadow-xs">
+          <span
+            class="rounded-full bg-zinc-900 text-white text-[11px] font-semibold px-3 py-1 shadow-xs"
+          >
             Diskon {{ product.discountPercent }}%
           </span>
-          <span class="rounded-full bg-white/95 text-emerald-700 border border-emerald-200 text-[11px] font-semibold px-2.5 py-0.5 shadow-2xs backdrop-blur-xs flex items-center gap-1">
+          <span
+            class="rounded-full bg-white/95 text-emerald-700 border border-emerald-200 text-[11px] font-semibold px-2.5 py-0.5 shadow-2xs backdrop-blur-xs flex items-center gap-1"
+          >
             <span>✓</span> Official Store
           </span>
         </div>
 
         <!-- Wishlist Button -->
-        <button (click)="isWishlisted = !isWishlisted" 
-                class="absolute top-4 right-4 p-2.5 rounded-full bg-white/90 hover:bg-white text-zinc-700 shadow-sm border border-zinc-200/80 transition-all hover:scale-110"
-                title="Simpan ke Wishlist">
-          <svg class="w-5 h-5 transition-colors" 
-               [class.fill-red-500]="isWishlisted" 
-               [class.text-red-500]="isWishlisted"
-               [class.fill-none]="!isWishlisted"
-               stroke="currentColor" 
-               viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+        <button
+          (click)="isWishlisted = !isWishlisted"
+          class="absolute top-4 right-4 p-2.5 rounded-full bg-white/90 hover:bg-white text-zinc-700 shadow-sm border border-zinc-200/80 transition-all hover:scale-110"
+          title="Simpan ke Wishlist"
+        >
+          <svg
+            class="w-5 h-5 transition-colors"
+            [class.fill-red-500]="isWishlisted"
+            [class.text-red-500]="isWishlisted"
+            [class.fill-none]="!isWishlisted"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+            />
           </svg>
         </button>
       </div>
@@ -53,14 +75,20 @@
       <!-- Thumbnail Strip (Shadcn style) -->
       <div class="grid grid-cols-4 gap-3">
         @for (img of product.images; track $index) {
-          <button (click)="selectedImageIndex = $index" 
-                  class="relative aspect-square rounded-xl border overflow-hidden p-1 bg-white transition-all shadow-2xs"
-                  [class.border-zinc-950]="selectedImageIndex === $index"
-                  [class.ring-2]="selectedImageIndex === $index"
-                  [class.ring-zinc-950]="selectedImageIndex === $index"
-                  [class.border-zinc-200]="selectedImageIndex !== $index"
-                  [class.opacity-60]="selectedImageIndex !== $index">
-            <img [src]="img" [alt]="product.name" class="w-full h-full object-cover rounded-lg" />
+          <button
+            (click)="selectedImageIndex = $index"
+            class="relative aspect-square rounded-xl border overflow-hidden p-1 bg-white transition-all shadow-2xs"
+            [class.border-zinc-950]="selectedImageIndex === $index"
+            [class.ring-2]="selectedImageIndex === $index"
+            [class.ring-zinc-950]="selectedImageIndex === $index"
+            [class.border-zinc-200]="selectedImageIndex !== $index"
+            [class.opacity-60]="selectedImageIndex !== $index"
+          >
+            <img
+              [src]="img"
+              [alt]="product.name"
+              class="w-full h-full object-cover rounded-lg"
+            />
           </button>
         }
       </div>
@@ -68,39 +96,89 @@
       <!-- Trust Badges Bar -->
       <!-- Trust Badges Bar -->
       <div class="grid grid-cols-3 gap-2 pt-2">
-        <div class="p-3 rounded-xl border border-zinc-200/80 bg-white text-center shadow-2xs flex flex-col items-center justify-center">
-          <svg class="w-5 h-5 text-emerald-600 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
-          <span class="text-[11px] font-semibold text-zinc-900 block">100% Original</span>
+        <div
+          class="p-3 rounded-xl border border-zinc-200/80 bg-white text-center shadow-2xs flex flex-col items-center justify-center"
+        >
+          <svg
+            class="w-5 h-5 text-emerald-600 mb-1"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.8"
+              d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+            />
+          </svg>
+          <span class="text-[11px] font-semibold text-zinc-900 block"
+            >100% Original</span
+          >
           <span class="text-[10px] text-zinc-400">Garansi 1 Tahun</span>
         </div>
-        <div class="p-3 rounded-xl border border-zinc-200/80 bg-white text-center shadow-2xs flex flex-col items-center justify-center">
-          <svg class="w-5 h-5 text-zinc-700 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"/></svg>
-          <span class="text-[11px] font-semibold text-zinc-900 block">Gratis Ongkir</span>
+        <div
+          class="p-3 rounded-xl border border-zinc-200/80 bg-white text-center shadow-2xs flex flex-col items-center justify-center"
+        >
+          <svg
+            class="w-5 h-5 text-zinc-700 mb-1"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.8"
+              d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0"
+            />
+          </svg>
+          <span class="text-[11px] font-semibold text-zinc-900 block"
+            >Gratis Ongkir</span
+          >
           <span class="text-[10px] text-zinc-400">Klaim Voucher</span>
         </div>
-        <div class="p-3 rounded-xl border border-zinc-200/80 bg-white text-center shadow-2xs flex flex-col items-center justify-center">
-          <svg class="w-5 h-5 text-zinc-700 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-          <span class="text-[11px] font-semibold text-zinc-900 block">Bebas Retur</span>
+        <div
+          class="p-3 rounded-xl border border-zinc-200/80 bg-white text-center shadow-2xs flex flex-col items-center justify-center"
+        >
+          <svg
+            class="w-5 h-5 text-zinc-700 mb-1"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="1.8"
+              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+            />
+          </svg>
+          <span class="text-[11px] font-semibold text-zinc-900 block"
+            >Bebas Retur</span
+          >
           <span class="text-[10px] text-zinc-400">7 Hari Pengembalian</span>
         </div>
       </div>
-
     </div>
 
     <!-- Right Column: Product Info & Purchase Box (7 cols) -->
     <div class="lg:col-span-7 space-y-6">
-      
       <!-- Product Header & Ratings -->
       <div class="space-y-3">
         <div class="flex items-center gap-2 text-xs text-zinc-500">
-          <span class="font-semibold text-zinc-700 bg-zinc-100 px-2 py-0.5 rounded border border-zinc-200">
+          <span
+            class="font-semibold text-zinc-700 bg-zinc-100 px-2 py-0.5 rounded border border-zinc-200"
+          >
             {{ product.category }}
           </span>
           <span>•</span>
           <span>Terjual {{ product.salesCount }}+ item</span>
         </div>
 
-        <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight text-zinc-950 leading-tight">
+        <h1
+          class="text-2xl sm:text-3xl font-extrabold tracking-tight text-zinc-950 leading-tight"
+        >
           {{ product.name }}
         </h1>
 
@@ -110,169 +188,233 @@
             <span class="text-zinc-900 text-sm">{{ product.rating }}</span>
           </div>
           <span class="text-zinc-300">•</span>
-          <span class="text-zinc-600 underline cursor-pointer hover:text-zinc-950">
+          <span
+            class="text-zinc-600 underline cursor-pointer hover:text-zinc-950"
+          >
             {{ product.ratingCount }} Penilaian Pembeli
           </span>
           <span class="text-zinc-300">•</span>
-          <span class="text-zinc-600">
-            45 Diskusi
-          </span>
+          <span class="text-zinc-600"> 45 Diskusi </span>
         </div>
       </div>
 
       <!-- Price Box (Shadcn style) -->
-      <div class="rounded-xl border border-zinc-200/90 bg-white p-5 shadow-2xs space-y-2">
+      <div
+        class="rounded-xl border border-zinc-200/90 bg-white p-5 shadow-2xs space-y-2"
+      >
         <div class="flex items-baseline gap-3">
           <div class="text-3xl font-black text-zinc-950">
-            Rp {{ product.price | number:'1.0-0' }}
+            Rp {{ product.price | number: "1.0-0" }}
           </div>
           <div class="text-sm text-zinc-400 line-through">
-            Rp {{ product.originalPrice | number:'1.0-0' }}
+            Rp {{ product.originalPrice | number: "1.0-0" }}
           </div>
-          <span class="rounded-full bg-red-50 text-red-700 border border-red-200 text-xs font-bold px-2 py-0.5">
-            Hemat Rp {{ (product.originalPrice - product.price) | number:'1.0-0' }}
+          <span
+            class="rounded-full bg-red-50 text-red-700 border border-red-200 text-xs font-bold px-2 py-0.5"
+          >
+            Hemat Rp
+            {{ product.originalPrice - product.price | number: "1.0-0" }}
           </span>
         </div>
         <div class="text-xs text-zinc-500 flex items-center gap-1.5 pt-1">
-          <svg class="w-3.5 h-3.5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+          <svg
+            class="w-3.5 h-3.5 text-emerald-600"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M5 13l4 4L19 7"
+            />
+          </svg>
           <span>Tersedia cicilan 0% mulai dari Rp 125.000 / bulan</span>
-        </div>
-      </div>
-
-      <!-- Variants Selection -->
-      <div class="space-y-3">
-        <div class="flex items-center justify-between text-xs">
-          <label class="font-semibold text-zinc-900 uppercase tracking-wider">
-            Pilihan Warna: <span class="text-zinc-600 normal-case font-medium">{{ selectedColor }}</span>
-          </label>
-        </div>
-
-        <div class="flex flex-wrap gap-2.5">
-          @for (option of product.variants[0].options; track option) {
-            <button (click)="selectedColor = option"
-                    class="px-4 py-2 rounded-lg text-xs font-medium border transition-all shadow-2xs"
-                    [class.border-zinc-950]="selectedColor === option"
-                    [class.bg-zinc-950]="selectedColor === option"
-                    [class.text-white]="selectedColor === option"
-                    [class.border-zinc-200]="selectedColor !== option"
-                    [class.bg-white]="selectedColor !== option"
-                    [class.text-zinc-800]="selectedColor !== option"
-                    [class.hover:border-zinc-300]="selectedColor !== option">
-              {{ option }}
-            </button>
-          }
         </div>
       </div>
 
       <!-- Quantity Stepper & Stock -->
       <div class="space-y-3 pt-2">
-        <label class="text-xs font-semibold text-zinc-900 uppercase tracking-wider block">
+        <label
+          class="text-xs font-semibold text-zinc-900 uppercase tracking-wider block"
+        >
           Jumlah Pembelian
         </label>
         <div class="flex items-center gap-4">
-          <div class="flex items-center border border-zinc-200 rounded-lg bg-white shadow-2xs">
-            <button (click)="updateQuantity(-1)" 
-                    [disabled]="quantity <= 1"
-                    class="px-3.5 py-1.5 text-zinc-600 hover:bg-zinc-100 rounded-l-lg text-sm font-semibold disabled:opacity-30">
+          <div
+            class="flex items-center border border-zinc-200 rounded-lg bg-white shadow-2xs"
+          >
+            <button
+              (click)="updateQuantity(-1)"
+              [disabled]="quantity <= 1"
+              class="px-3.5 py-1.5 text-zinc-600 hover:bg-zinc-100 rounded-l-lg text-sm font-semibold disabled:opacity-30"
+            >
               -
             </button>
-            <span class="px-4 py-1.5 text-xs font-bold text-zinc-950 min-w-[2.5rem] text-center border-x border-zinc-200">
+            <span
+              class="px-4 py-1.5 text-xs font-bold text-zinc-950 min-w-[2.5rem] text-center border-x border-zinc-200"
+            >
               {{ quantity }}
             </span>
-            <button (click)="updateQuantity(1)" 
-                    [disabled]="quantity >= product.stock"
-                    class="px-3.5 py-1.5 text-zinc-600 hover:bg-zinc-100 rounded-r-lg text-sm font-semibold disabled:opacity-30">
+            <button
+              (click)="updateQuantity(1)"
+              [disabled]="quantity >= product.stock"
+              class="px-3.5 py-1.5 text-zinc-600 hover:bg-zinc-100 rounded-r-lg text-sm font-semibold disabled:opacity-30"
+            >
               +
             </button>
           </div>
           <span class="text-xs text-zinc-500">
-            Stok tersisa: <strong class="text-zinc-900 font-semibold">{{ product.stock }} unit</strong>
+            Stok tersisa:
+            <strong class="text-zinc-900 font-semibold"
+              >{{ product.stock }} unit</strong
+            >
           </span>
         </div>
       </div>
 
       <!-- Subtotal Live Calculation -->
-      <div class="p-4 rounded-xl bg-zinc-100/70 border border-zinc-200/80 flex items-center justify-between">
-        <span class="text-xs font-medium text-zinc-600">Subtotal Barang ({{ quantity }}x):</span>
-        <span class="text-lg font-black text-zinc-950">Rp {{ totalPrice | number:'1.0-0' }}</span>
+      <div
+        class="p-4 rounded-xl bg-zinc-100/70 border border-zinc-200/80 flex items-center justify-between"
+      >
+        <span class="text-xs font-medium text-zinc-600"
+          >Subtotal Barang ({{ quantity }}x):</span
+        >
+        <span class="text-lg font-black text-zinc-950"
+          >Rp {{ totalPrice | number: "1.0-0" }}</span
+        >
       </div>
 
       <!-- Action Buttons -->
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-        <button (click)="addToCart()" 
-                class="w-full inline-flex items-center justify-center gap-2 rounded-md border border-zinc-300 bg-white px-5 py-3 text-sm font-semibold text-zinc-900 shadow-2xs hover:bg-zinc-50 transition-all hover:scale-[1.01] active:scale-[0.99]">
-          <svg class="w-4 h-4 text-zinc-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
-          <span>{{ addedToCartFeedback ? '✓ Ditambahkan!' : '+ Tambah ke Keranjang' }}</span>
+        <button
+          (click)="addToCart()"
+          class="w-full inline-flex items-center justify-center gap-2 rounded-md border border-zinc-300 bg-white px-5 py-3 text-sm font-semibold text-zinc-900 shadow-2xs hover:bg-zinc-50 transition-all hover:scale-[1.01] active:scale-[0.99]"
+        >
+          <svg
+            class="w-4 h-4 text-zinc-700"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
+            />
+          </svg>
+          <span>{{
+            addedToCartFeedback ? "✓ Ditambahkan!" : "+ Tambah ke Keranjang"
+          }}</span>
         </button>
 
-        <button (click)="buyNow()" 
-                class="w-full inline-flex items-center justify-center gap-2 rounded-md bg-zinc-900 px-5 py-3 text-sm font-semibold text-zinc-50 shadow-sm hover:bg-zinc-800 transition-all hover:scale-[1.01] active:scale-[0.99]">
+        <button
+          (click)="buyNow()"
+          class="w-full inline-flex items-center justify-center gap-2 rounded-md bg-zinc-900 px-5 py-3 text-sm font-semibold text-zinc-50 shadow-sm hover:bg-zinc-800 transition-all hover:scale-[1.01] active:scale-[0.99]"
+        >
           <span>Beli Sekarang</span>
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+          <svg
+            class="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M14 5l7 7m0 0l-7 7m7-7H3"
+            />
+          </svg>
         </button>
       </div>
 
       <!-- Seller Profile Snippet Card -->
-      <div class="rounded-xl border border-zinc-200/80 bg-white p-4 shadow-2xs flex items-center justify-between gap-4 mt-6">
+      <div
+        class="rounded-xl border border-zinc-200/80 bg-white p-4 shadow-2xs flex items-center justify-between gap-4 mt-6"
+      >
         <div class="flex items-center gap-3">
-          <img [src]="product.store.avatar" [alt]="product.store.name" class="w-12 h-12 rounded-full object-cover border border-zinc-200" />
+          <img
+            [src]="product.store.avatar"
+            [alt]="product.store.name"
+            class="w-12 h-12 rounded-full object-cover border border-zinc-200"
+          />
           <div>
             <div class="flex items-center gap-1.5">
-              <span class="text-sm font-bold text-zinc-900">{{ product.store.name }}</span>
-              <span class="rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-semibold px-2 py-0.2">Official</span>
+              <span class="text-sm font-bold text-zinc-900">{{
+                product.store.name
+              }}</span>
+              <span
+                class="rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-semibold px-2 py-0.2"
+                >Official</span
+              >
             </div>
             <div class="text-xs text-zinc-400 mt-0.5">
-              {{ product.store.city }} • Rating Toko ★ {{ product.store.rating }}
+              {{ product.store.city }} • Rating Toko ★
+              {{ product.store.rating }}
             </div>
           </div>
         </div>
 
         <div class="flex items-center gap-2">
-          <button class="px-3 py-1.5 rounded-md border border-zinc-200 bg-white text-xs font-semibold text-zinc-700 hover:bg-zinc-50 shadow-2xs transition-colors">
+          <button
+            class="px-3 py-1.5 rounded-md border border-zinc-200 bg-white text-xs font-semibold text-zinc-700 hover:bg-zinc-50 shadow-2xs transition-colors"
+          >
             Chat Penjual
           </button>
         </div>
       </div>
-
     </div>
-
   </div>
 
   <!-- Bottom Details & Reviews Section (Tabs) -->
   <div class="mt-16 space-y-6">
-    
     <!-- Tab Controls (Shadcn style) -->
-    <div class="flex items-center gap-1 rounded-lg bg-zinc-100 p-1 border border-zinc-200/60 max-w-md">
-      <button (click)="activeTab = 'deskripsi'"
-              [class.bg-white]="activeTab === 'deskripsi'"
-              [class.text-zinc-950]="activeTab === 'deskripsi'"
-              [class.shadow-2xs]="activeTab === 'deskripsi'"
-              [class.font-semibold]="activeTab === 'deskripsi'"
-              class="flex-1 py-2 text-xs font-medium rounded-md text-zinc-600 hover:text-zinc-950 transition-all text-center">
+    <div
+      class="flex items-center gap-1 rounded-lg bg-zinc-100 p-1 border border-zinc-200/60 max-w-md"
+    >
+      <button
+        (click)="activeTab = 'deskripsi'"
+        [class.bg-white]="activeTab === 'deskripsi'"
+        [class.text-zinc-950]="activeTab === 'deskripsi'"
+        [class.shadow-2xs]="activeTab === 'deskripsi'"
+        [class.font-semibold]="activeTab === 'deskripsi'"
+        class="flex-1 py-2 text-xs font-medium rounded-md text-zinc-600 hover:text-zinc-950 transition-all text-center"
+      >
         Deskripsi Produk
       </button>
-      <button (click)="activeTab = 'spesifikasi'"
-              [class.bg-white]="activeTab === 'spesifikasi'"
-              [class.text-zinc-950]="activeTab === 'spesifikasi'"
-              [class.shadow-2xs]="activeTab === 'spesifikasi'"
-              [class.font-semibold]="activeTab === 'spesifikasi'"
-              class="flex-1 py-2 text-xs font-medium rounded-md text-zinc-600 hover:text-zinc-950 transition-all text-center">
+      <button
+        (click)="activeTab = 'spesifikasi'"
+        [class.bg-white]="activeTab === 'spesifikasi'"
+        [class.text-zinc-950]="activeTab === 'spesifikasi'"
+        [class.shadow-2xs]="activeTab === 'spesifikasi'"
+        [class.font-semibold]="activeTab === 'spesifikasi'"
+        class="flex-1 py-2 text-xs font-medium rounded-md text-zinc-600 hover:text-zinc-950 transition-all text-center"
+      >
         Spesifikasi Teknis
       </button>
-      <button (click)="activeTab = 'ulasan'"
-              [class.bg-white]="activeTab === 'ulasan'"
-              [class.text-zinc-950]="activeTab === 'ulasan'"
-              [class.shadow-2xs]="activeTab === 'ulasan'"
-              [class.font-semibold]="activeTab === 'ulasan'"
-              class="flex-1 py-2 text-xs font-medium rounded-md text-zinc-600 hover:text-zinc-950 transition-all text-center">
+      <button
+        (click)="activeTab = 'ulasan'"
+        [class.bg-white]="activeTab === 'ulasan'"
+        [class.text-zinc-950]="activeTab === 'ulasan'"
+        [class.shadow-2xs]="activeTab === 'ulasan'"
+        [class.font-semibold]="activeTab === 'ulasan'"
+        class="flex-1 py-2 text-xs font-medium rounded-md text-zinc-600 hover:text-zinc-950 transition-all text-center"
+      >
         Ulasan ({{ product.reviews.length }})
       </button>
     </div>
 
     <!-- Tab 1: Deskripsi -->
-    @if (activeTab === 'deskripsi') {
-      <div class="rounded-2xl border border-zinc-200/80 bg-white p-8 shadow-2xs space-y-4">
-        <h3 class="text-base font-bold text-zinc-950 pb-3 border-b border-zinc-100">
+    @if (activeTab === "deskripsi") {
+      <div
+        class="rounded-2xl border border-zinc-200/80 bg-white p-8 shadow-2xs space-y-4"
+      >
+        <h3
+          class="text-base font-bold text-zinc-950 pb-3 border-b border-zinc-100"
+        >
           Tentang Produk Ini
         </h3>
         <div class="text-sm text-zinc-600 leading-relaxed space-y-3">
@@ -284,9 +426,13 @@
     }
 
     <!-- Tab 2: Spesifikasi -->
-    @if (activeTab === 'spesifikasi') {
-      <div class="rounded-2xl border border-zinc-200/80 bg-white p-8 shadow-2xs space-y-4">
-        <h3 class="text-base font-bold text-zinc-950 pb-3 border-b border-zinc-100">
+    @if (activeTab === "spesifikasi") {
+      <div
+        class="rounded-2xl border border-zinc-200/80 bg-white p-8 shadow-2xs space-y-4"
+      >
+        <h3
+          class="text-base font-bold text-zinc-950 pb-3 border-b border-zinc-100"
+        >
           Spesifikasi Teknis Lengkap
         </h3>
         <div class="overflow-x-auto">
@@ -294,8 +440,14 @@
             <tbody class="divide-y divide-zinc-100">
               @for (spec of product.specifications; track spec.key) {
                 <tr class="hover:bg-zinc-50/50">
-                  <td class="py-3 px-4 w-1/3 font-semibold text-zinc-500 bg-zinc-50/50 rounded-l">{{ spec.key }}</td>
-                  <td class="py-3 px-4 font-medium text-zinc-900 rounded-r">{{ spec.value }}</td>
+                  <td
+                    class="py-3 px-4 w-1/3 font-semibold text-zinc-500 bg-zinc-50/50 rounded-l"
+                  >
+                    {{ spec.key }}
+                  </td>
+                  <td class="py-3 px-4 font-medium text-zinc-900 rounded-r">
+                    {{ spec.value }}
+                  </td>
                 </tr>
               }
             </tbody>
@@ -305,25 +457,34 @@
     }
 
     <!-- Tab 3: Ulasan & Penilaian -->
-    @if (activeTab === 'ulasan') {
-      <div class="rounded-2xl border border-zinc-200/80 bg-white p-8 shadow-2xs space-y-8">
-        
+    @if (activeTab === "ulasan") {
+      <div
+        class="rounded-2xl border border-zinc-200/80 bg-white p-8 shadow-2xs space-y-8"
+      >
         <!-- Review Summary Score -->
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-6 pb-6 border-b border-zinc-100">
+        <div
+          class="flex flex-col sm:flex-row sm:items-center justify-between gap-6 pb-6 border-b border-zinc-100"
+        >
           <div class="space-y-1">
-            <div class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Rating Keseluruhan</div>
+            <div
+              class="text-xs font-semibold text-zinc-400 uppercase tracking-wider"
+            >
+              Rating Keseluruhan
+            </div>
             <div class="flex items-baseline gap-2">
               <span class="text-4xl font-black text-zinc-950">4.9</span>
               <span class="text-zinc-400 text-sm">/ 5.0</span>
             </div>
-            <div class="flex items-center text-amber-500 text-base">
-              ★★★★★
+            <div class="flex items-center text-amber-500 text-base">★★★★★</div>
+            <div class="text-xs text-zinc-500">
+              Berdasarkan {{ product.ratingCount }} ulasan terverifikasi
             </div>
-            <div class="text-xs text-zinc-500">Berdasarkan {{ product.ratingCount }} ulasan terverifikasi</div>
           </div>
 
           <div class="flex items-center gap-2">
-            <button class="px-4 py-2 rounded-md bg-zinc-900 text-xs font-semibold text-white hover:bg-zinc-800 shadow-2xs transition-colors">
+            <button
+              class="px-4 py-2 rounded-md bg-zinc-900 text-xs font-semibold text-white hover:bg-zinc-800 shadow-2xs transition-colors"
+            >
               Tulis Ulasan Produk
             </button>
           </div>
@@ -332,16 +493,29 @@
         <!-- Reviews List -->
         <div class="space-y-6">
           @for (review of product.reviews; track review.id) {
-            <div class="space-y-3 pb-6 border-b border-zinc-100 last:border-0 last:pb-0">
+            <div
+              class="space-y-3 pb-6 border-b border-zinc-100 last:border-0 last:pb-0"
+            >
               <div class="flex items-center justify-between">
                 <div class="flex items-center gap-3">
-                  <img [src]="review.avatar" [alt]="review.author" class="w-9 h-9 rounded-full object-cover border border-zinc-200" />
+                  <img
+                    [src]="review.avatar"
+                    [alt]="review.author"
+                    class="w-9 h-9 rounded-full object-cover border border-zinc-200"
+                  />
                   <div>
                     <div class="flex items-center gap-2">
-                      <span class="text-xs font-bold text-zinc-900">{{ review.author }}</span>
-                      <span class="text-[10px] text-emerald-600 bg-emerald-50 px-2 py-0.2 rounded-full border border-emerald-200 font-semibold">Pembeli Terverifikasi</span>
+                      <span class="text-xs font-bold text-zinc-900">{{
+                        review.author
+                      }}</span>
+                      <span
+                        class="text-[10px] text-emerald-600 bg-emerald-50 px-2 py-0.2 rounded-full border border-emerald-200 font-semibold"
+                        >Pembeli Terverifikasi</span
+                      >
                     </div>
-                    <div class="text-[11px] text-zinc-400 mt-0.5">Varian: {{ review.variant }} • {{ review.date }}</div>
+                    <div class="text-[11px] text-zinc-400 mt-0.5">
+                      Varian: {{ review.variant }} • {{ review.date }}
+                    </div>
                   </div>
                 </div>
                 <div class="text-amber-500 text-xs font-bold">
@@ -354,54 +528,92 @@
               </p>
 
               <div class="flex items-center gap-2 text-[11px] text-zinc-400">
-                <button class="flex items-center gap-1 hover:text-zinc-800 transition-colors">
-                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5"/></svg>
+                <button
+                  class="flex items-center gap-1 hover:text-zinc-800 transition-colors"
+                >
+                  <svg
+                    class="w-3.5 h-3.5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5"
+                    />
+                  </svg>
                   <span>Membantu ({{ review.helpfulCount }})</span>
                 </button>
               </div>
             </div>
           }
         </div>
-
       </div>
     }
-
   </div>
 
   <!-- Related Products (Shadcn style cards) -->
   <div class="mt-16 space-y-6">
-    <div class="flex items-center justify-between pb-4 border-b border-zinc-200">
+    <div
+      class="flex items-center justify-between pb-4 border-b border-zinc-200"
+    >
       <div>
-        <h2 class="text-xl font-bold tracking-tight text-zinc-950">Produk Serupa yang Mungkin Anda Suka</h2>
-        <p class="text-xs text-zinc-500 mt-0.5">Rekomendasi terbaik dari kategori yang sama.</p>
+        <h2 class="text-xl font-bold tracking-tight text-zinc-950">
+          Produk Serupa yang Mungkin Anda Suka
+        </h2>
+        <p class="text-xs text-zinc-500 mt-0.5">
+          Rekomendasi terbaik dari kategori yang sama.
+        </p>
       </div>
-      <a [routerLink]="['/products']" class="text-xs font-semibold text-zinc-900 hover:underline">
+      <a
+        [routerLink]="['/products']"
+        class="text-xs font-semibold text-zinc-900 hover:underline"
+      >
         Lihat Semua →
       </a>
     </div>
 
     <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-5">
       @for (item of relatedProducts; track item.id) {
-        <a [routerLink]="['/products', item.id]" 
-           class="group flex flex-col rounded-xl border border-zinc-200/80 bg-white shadow-2xs hover:shadow-md hover:border-zinc-300 transition-all overflow-hidden">
-          <div class="relative aspect-square w-full overflow-hidden bg-zinc-100">
-            <img [src]="item.image" [alt]="item.name" class="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300" />
+        <a
+          [routerLink]="['/products', item.id]"
+          class="group flex flex-col rounded-xl border border-zinc-200/80 bg-white shadow-2xs hover:shadow-md hover:border-zinc-300 transition-all overflow-hidden"
+        >
+          <div
+            class="relative aspect-square w-full overflow-hidden bg-zinc-100"
+          >
+            <img
+              [src]="item.image"
+              [alt]="item.name"
+              class="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300"
+            />
           </div>
           <div class="p-4 flex-1 flex flex-col">
-            <div class="text-[11px] text-zinc-400 font-medium mb-1">{{ item.category }}</div>
-            <h4 class="text-xs font-medium text-zinc-900 line-clamp-2 leading-snug group-hover:text-zinc-600 transition-colors">
+            <div class="text-[11px] text-zinc-400 font-medium mb-1">
+              {{ item.category }}
+            </div>
+            <h4
+              class="text-xs font-medium text-zinc-900 line-clamp-2 leading-snug group-hover:text-zinc-600 transition-colors"
+            >
               {{ item.name }}
             </h4>
-            <div class="mt-3 pt-2 border-t border-zinc-100 flex items-center justify-between">
-              <span class="text-sm font-bold text-zinc-950">Rp {{ item.price | number:'1.0-0' }}</span>
-              <span class="text-xs text-amber-500 font-semibold">★ {{ item.rating }}</span>
+            <div
+              class="mt-3 pt-2 border-t border-zinc-100 flex items-center justify-between"
+            >
+              <span class="text-sm font-bold text-zinc-950"
+                >Rp {{ item.price | number: "1.0-0" }}</span
+              >
+              <span class="text-xs text-amber-500 font-semibold"
+                >★ {{ item.rating }}</span
+              >
             </div>
           </div>
         </a>
       }
     </div>
   </div>
-
 </main>
 
 <app-compact-footer></app-compact-footer>
