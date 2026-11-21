@@ -9,6 +9,8 @@ import { OrderService } from '../../../services/order/order.service';
 import { AddressService } from '../../../services/address/address.service';
 import { OrderResponse } from '../../../models/order.model';
 import { AddressResponse } from '../../../models/address.model';
+import { OrderItemService } from '../../../services/orderItem/order-item.service';
+import { OrderItemResponse } from '../../../models/orderItem.model';
 
 export interface TimelineStep {
   title: string;
@@ -52,11 +54,6 @@ export interface OrderDetailView {
   total: number;
 }
 
-interface CheckoutSummary {
-  items: OrderDetailItem[];
-  subtotal: number;
-}
-
 @Component({
   selector: 'app-buyer-order-detail',
   standalone: true,
@@ -67,11 +64,13 @@ interface CheckoutSummary {
 export class BuyerOrderDetailComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private orderSvc = inject(OrderService);
+  private orderItemSvc = inject(OrderItemService);
   private addressSvc = inject(AddressService);
   private cdr = inject(ChangeDetectorRef);
   private destroyRef = inject(DestroyRef);
 
   private orderRequest?: Subscription;
+  private orderItemsRequest?: Subscription;
 
   private readonly placeholderImage =
     'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600&auto=format&fit=crop&q=80';
@@ -105,6 +104,8 @@ export class BuyerOrderDetailComponent implements OnInit {
 
   loadOrder(showLoader = true): void {
     this.orderRequest?.unsubscribe();
+    this.orderItemsRequest?.unsubscribe();
+
     if (showLoader) this.isLoading = true;
     this.errorMessage = '';
 
@@ -112,8 +113,9 @@ export class BuyerOrderDetailComponent implements OnInit {
       next: (res: OrderResponse) => {
         const raw: any = (res as any)?.data ?? (res as any)?.order ?? res;
         const previousAddress = this.order?.shippingAddress;
+        const previousItems = this.order?.items ?? [];
 
-        this.order = this.mapOrder(raw);
+        this.order = this.mapOrder(raw, previousItems);
 
         if (previousAddress && previousAddress.address !== '-') {
           this.order.shippingAddress = previousAddress;
@@ -121,6 +123,9 @@ export class BuyerOrderDetailComponent implements OnInit {
         this.timeline = this.buildTimeline(raw);
         this.isLoading = false;
         this.cdr.detectChanges();
+
+        // Ambil daftar item pesanan dari OrderItemService
+        this.loadOrderItems(this.orderId);
 
         if (!previousAddress || previousAddress.address === '-') {
           const addressId = this.toNumber(this.pick(raw, 'addressId'));
@@ -132,6 +137,38 @@ export class BuyerOrderDetailComponent implements OnInit {
         this.errorMessage = err.error?.message || 'Gagal memuat detail pesanan.';
         this.isLoading = false;
         this.cdr.detectChanges();
+      }
+    });
+  }
+
+  private loadOrderItems(orderId: number): void {
+    this.orderItemsRequest?.unsubscribe();
+
+    this.orderItemsRequest = this.orderItemSvc.getAllOrderItemsByOrderId(orderId).subscribe({
+      next: (res: OrderItemResponse[] | { data?: OrderItemResponse[] }) => {
+        const list = Array.isArray(res) ? res : (res?.data ?? []);
+        if (!this.order) return;
+
+        const mappedItems: OrderDetailItem[] = list.map((item) => ({
+          name: item.productName || '-',
+          price: this.toNumber(item.priceAtPurchase) || 0,
+          qty: Math.max(1, this.toNumber(item.quantity) || 1),
+          image: this.placeholderImage
+        }));
+
+        this.order.items = mappedItems;
+
+        const itemsSubtotal = mappedItems.reduce((sum, i) => sum + i.price * i.qty, 0);
+        if (itemsSubtotal > 0) {
+          this.order.subtotal = itemsSubtotal;
+          this.order.discountPercent =
+            this.order.discount > 0 ? Math.round((this.order.discount / this.order.subtotal) * 100) : 0;
+        }
+
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        console.error('Gagal mengambil item pesanan', err);
       }
     });
   }
@@ -226,7 +263,7 @@ export class BuyerOrderDetailComponent implements OnInit {
       ) || 1;
 
       const unit = this.firstPositive(
-        this.pick(i, 'price', 'unitPrice', 'productPrice', 'hargaSatuan', 'harga')
+        this.pick(i, 'price', 'unitPrice', 'productPrice', 'priceAtPurchase', 'hargaSatuan', 'harga')
       );
 
       const lineTotal = this.firstPositive(
@@ -246,21 +283,16 @@ export class BuyerOrderDetailComponent implements OnInit {
     });
   }
 
-  private mapOrder(raw: any): OrderDetailView {
+  private mapOrder(raw: any, fallbackItems: OrderDetailItem[] = []): OrderDetailView {
     const status = this.pick(raw, 'orderStatus', 'status') as string | number | undefined;
     const level = this.statusLevel(status);
 
-    const summary = history.state?.checkoutSummary as CheckoutSummary | undefined;
-
     let items = this.mapItems(raw);
-    if (items.length === 0 && summary?.items?.length) {
-      items = summary.items.map(i => ({
-        name: i.name,
-        price: this.toNumber(i.price) || 0,
-        qty: this.firstPositive(i.qty) || 1,
-        image: i.image || this.placeholderImage
-      }));
+    if (items.length === 0 && fallbackItems.length > 0) {
+      items = fallbackItems;
     }
+
+    const itemsTotal = items.reduce((acc, i) => acc + i.price * i.qty, 0);
 
     const rawBeforeDisc = this.firstNumber(
       this.pick(raw, 'totalBeforeDisc', 'totalBeforeDiscount', 'subtotal', 'totalPrice', 'totalAmount')
@@ -272,31 +304,15 @@ export class BuyerOrderDetailComponent implements OnInit {
       this.pick(raw, 'discountAmount', 'discountDisc', 'discount', 'discountValue')
     );
 
-    const itemsTotal = items.reduce((acc, i) => acc + i.price * i.qty, 0);
+    const subtotal = itemsTotal > 0
+      ? itemsTotal
+      : (!isNaN(rawBeforeDisc) && rawBeforeDisc > 0 ? rawBeforeDisc : 0);
 
-    let subtotal = !isNaN(rawBeforeDisc) && rawBeforeDisc > 0
-      ? rawBeforeDisc
-      : (itemsTotal > 0 ? itemsTotal : (this.toNumber(summary?.subtotal) || 0));
+    const discount = !isNaN(rawDiscount) && rawDiscount > 0 ? rawDiscount : 0;
 
-    let total: number;
-    if (!isNaN(rawAfterDisc) && rawAfterDisc > 0) {
-      total = rawAfterDisc;
-    } else if (!isNaN(rawDiscount) && rawDiscount > 0) {
-      total = Math.max(subtotal - rawDiscount, 0);
-    } else {
-      total = subtotal;
-    }
-
-    const discount = !isNaN(rawDiscount) && rawDiscount > 0
-      ? rawDiscount
-      : (subtotal > total ? subtotal - total : 0);
-
-    if (items.length > 0 && itemsTotal === 0 && subtotal > 0) {
-      const totalQty = items.reduce((acc, i) => acc + (i.qty || 1), 0);
-      if (items.length === 1 && totalQty > 0) {
-        items = items.map(i => ({ ...i, price: subtotal / totalQty }));
-      }
-    }
+    const total = !isNaN(rawAfterDisc) && rawAfterDisc > 0
+      ? rawAfterDisc
+      : Math.max(subtotal - discount, 0);
 
     const shippingFee = this.firstNumber(this.pick(raw, 'shippingFee', 'shippingCost', 'deliveryFee')) || 0;
     const serviceFee = this.firstNumber(this.pick(raw, 'serviceFee', 'adminFee')) || 0;
@@ -306,7 +322,7 @@ export class BuyerOrderDetailComponent implements OnInit {
       date: this.formatDate(this.pick(raw, 'createdAt', 'orderDate') as string),
       status: this.statusLabel(status),
       statusTone: this.statusTone(status),
-      canComplete: level === 2, // Aktif saat ON_DELIVERY
+      canComplete: level === 2,
       courier: '-',
       trackingNumber: '-',
       store: (this.pick(raw, 'storeName', 'store') as string) ?? '-',

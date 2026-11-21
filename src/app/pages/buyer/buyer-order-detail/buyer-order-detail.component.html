@@ -158,26 +158,19 @@
             <span class="font-semibold text-zinc-900">Rp {{ order.subtotal | number:'1.0-0' }}</span>
           </div>
         } @else {
-          @for (item of order.items; track item.name) {
+          @for (item of order.items; track item.name + $index) {
             <div class="flex items-center justify-between gap-4">
               <div class="flex items-center gap-3">
                 <img [src]="item.image" [alt]="item.name" class="w-14 h-14 rounded-lg object-cover bg-zinc-100 border border-zinc-200/60" />
                 <div>
                   <div class="text-sm font-semibold text-zinc-900">{{ item.name }}</div>
                   <div class="text-xs text-zinc-500">
-                    {{ item.qty }} barang
-                    @if (item.price > 0) {
-                      x Rp {{ item.price | number:'1.0-0' }}
-                    }
+                    {{ item.qty }} barang x Rp {{ item.price | number:'1.0-0' }}
                   </div>
                 </div>
               </div>
               <div class="text-sm font-bold text-zinc-950">
-                @if ((item.price * item.qty) > 0) {
-                  Rp {{ (item.price * item.qty) | number:'1.0-0' }}
-                } @else {
-                  Rp {{ order.subtotal | number:'1.0-0' }}
-                }
+                Rp {{ (item.price * item.qty) | number:'1.0-0' }}
               </div>
             </div>
           }
