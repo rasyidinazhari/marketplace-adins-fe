@@ -1,14 +1,17 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { TopNavbarComponent } from '../../../layout/top-navbar/top-navbar.component';
 import { CompactFooterComponent } from '../../../layout/compact-footer/compact-footer.component';
+import { CartService } from '../../../services/cart/cart.service';
+import { CartItemResponse } from '../../../models/cart.model';
 
+// Interface lokal untuk kebutuhan UI
 export interface CartItem {
-  id: number;
+  id: number;       // Cart ID
+  productId: number;
   name: string;
-  category: string;
   store: string;
   price: number;
   originalPrice?: number;
@@ -24,35 +27,76 @@ export interface CartItem {
   templateUrl: './cart.component.html',
   styleUrl: './cart.component.css'
 })
-export class CartComponent {
+export class CartComponent implements OnInit {
+  private cartService = inject(CartService);
+  private cdr = inject(ChangeDetectorRef);
+
   voucherCode = 'WARUNGADINS50';
   discountAmount = 50000;
   isVoucherApplied = true;
 
-  items: CartItem[] = [
-    {
-      id: 1,
-      name: 'Wireless Noise-Cancelling Headphones Pro ANC',
-      category: 'Elektronik',
-      store: 'Adins Audio Store',
-      price: 1499000,
-      originalPrice: 1999000,
-      quantity: 1,
-      image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600&auto=format&fit=crop&q=80',
-      selected: true
-    },
-    {
-      id: 2,
-      name: 'Signature Arabica Coffee Beans Single Origin 250g',
-      category: 'F&B',
-      store: 'Kopi Nusantara',
-      price: 85000,
-      quantity: 2,
-      image: 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?w=600&auto=format&fit=crop&q=80',
-      selected: true
-    }
-  ];
+  items: CartItem[] = [];
+  isLoading: boolean = false;
 
+  defaultImage = 'assets/product-placeholder.svg'; 
+
+  ngOnInit(): void {
+    this.loadCart();
+  }
+
+  loadCart(): void {
+    this.isLoading = true;
+    this.cartService.getCartItems().subscribe({
+      next: (response: CartItemResponse[]) => {
+        // Mapping data dari API ke format UI
+        this.items = response.map(item => ({
+          id: item.id,
+          productId: item.productId,
+          name: item.productName,
+          store: item.storeName || 'Toko Tidak Diketahui', 
+          price: item.totalPrice / item.quantity, 
+          quantity: item.quantity,
+          image: this.defaultImage, 
+          selected: true // Default terpilih saat dimuat
+        }));
+        
+        this.isLoading = false;
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        console.error('Gagal mengambil data keranjang', err);
+        this.isLoading = false;
+      }
+    });
+  }
+
+  // --- GETTER UNTUK GROUPING TOKO ---
+  get groupedItems() {
+    const groups: { [key: string]: CartItem[] } = {};
+    
+    this.items.forEach(item => {
+      if (!groups[item.store]) {
+        groups[item.store] = [];
+      }
+      groups[item.store].push(item);
+    });
+
+    return Object.keys(groups).map(storeName => ({
+      storeName: storeName,
+      items: groups[storeName]
+    }));
+  }
+
+  isAllStoreSelected(storeItems: CartItem[]): boolean {
+    return storeItems.every(i => i.selected);
+  }
+
+  toggleStoreSelection(storeItems: CartItem[]): void {
+    const nextState = !this.isAllStoreSelected(storeItems);
+    storeItems.forEach(i => i.selected = nextState);
+  }
+
+  // --- GETTER UNTUK SELEKSI GLOBAL (SELECT ALL) ---
   get allSelected(): boolean {
     return this.items.length > 0 && this.items.every(i => i.selected);
   }
@@ -62,17 +106,56 @@ export class CartComponent {
     this.items.forEach(i => i.selected = nextState);
   }
 
+  // --- CRUD ACTIONS ---
   updateQuantity(item: CartItem, delta: number): void {
     const newQty = item.quantity + delta;
     if (newQty >= 1) {
-      item.quantity = newQty;
+      const oldQty = item.quantity;
+      item.quantity = newQty; // Optimistic UI
+      
+      const newTotalPrice = item.price * newQty;
+
+      const payload = {
+        userId: 1, // Asumsi backend menggunakan JWT untuk ID asli
+        productId: item.productId,
+        quantity: newQty,
+        totalPrice: newTotalPrice
+      };
+
+      this.cartService.updateCartItem(item.id, payload).subscribe({
+        next: () => {},
+        error: (err) => {
+          console.error('Gagal update kuantitas', err);
+          item.quantity = oldQty; // Rollback
+        }
+      });
     }
   }
 
   removeItem(id: number): void {
-    this.items = this.items.filter(i => i.id !== id);
+    if(confirm('Apakah Anda yakin ingin menghapus item ini?')) {
+      this.cartService.removeCartItem(id).subscribe({
+        next: () => {
+          this.items = this.items.filter(i => i.id !== id);
+        },
+        error: (err) => {
+          console.error('Gagal menghapus item', err);
+          alert('Gagal menghapus item dari keranjang.');
+        }
+      });
+    }
   }
 
+  removeAllItems(): void {
+    if(confirm('Apakah Anda yakin ingin menghapus SEMUA item dari keranjang?')) {
+      this.items.forEach(item => {
+        this.cartService.removeCartItem(item.id).subscribe();
+      });
+      this.items = []; 
+    }
+  }
+
+  // --- PERHITUNGAN HARGA ---
   get selectedItems(): CartItem[] {
     return this.items.filter(i => i.selected);
   }
