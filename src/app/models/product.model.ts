@@ -32,20 +32,28 @@ export interface BackendProduct {
   imageUrl?: string;
 }
 
+export interface SellerProduct extends Omit<BackendProduct,
+  'productName' | 'productDescription' | 'productPrice' | 'productStock'> {
+  productName: string | null;
+  productDescription?: string | null;
+  productPrice: number | null;
+  productStock: number | null;
+}
+
 export interface CreateProductPayload {
   storeId: number;
   categoryIds: number[];
   productName: string;
-  productDescription: string;
+  productDescription?: string;
   productPrice: number;
   productStock: number;
 }
 
 export interface UpdateProductPayload {
-  storeId: number;
   categoryIds?: number[];
   productName?: string;
   productDescription?: string;
   productPrice?: number;
   productStock?: number;
+  expectedStock?: number | null;
 }

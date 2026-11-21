@@ -4,7 +4,10 @@ import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
   BackendProduct,
+  CategoryItem,
   CreateProductPayload,
+  SellerProduct,
+  StoreSummary,
   UpdateProductPayload,
 } from '../../models/product.model';
 
@@ -18,7 +21,17 @@ export class ProductService {
   /**
    * Mengambil daftar produk dari API backend
    */
-  getProducts(search?: string, page: number = 1, limit: number = 20): Observable<BackendProduct[]> {
+  getProducts(search?: string, page = 1, limit = 20, categoryId = 0): Observable<BackendProduct[]> {
+    const params = this.getProductParams(search, page, limit, categoryId);
+    return this.http.get<BackendProduct[]>(`${environment.apiUrl}/products`, { params });
+  }
+
+  getSellerProducts(search?: string, page = 1, limit = 20, categoryId = 0): Observable<SellerProduct[]> {
+    const params = this.getProductParams(search, page, limit, categoryId);
+    return this.http.get<SellerProduct[]>(`${environment.apiUrl}/seller/products`, { params });
+  }
+
+  private getProductParams(search: string | undefined, page: number, limit: number, categoryId: number): HttpParams {
     let params = new HttpParams()
       .set('page', page.toString())
       .set('limit', limit.toString());
@@ -27,7 +40,19 @@ export class ProductService {
       params = params.set('search', search.trim());
     }
 
-    return this.http.get<BackendProduct[]>(`${environment.apiUrl}/products`, { params });
+    if (categoryId > 0) {
+      params = params.set('categoryId', categoryId);
+    }
+
+    return params;
+  }
+
+  getCategories(): Observable<CategoryItem[]> {
+    return this.http.get<CategoryItem[]>(`${environment.apiUrl}/categories`);
+  }
+
+  getSellerStores(): Observable<StoreSummary[]> {
+    return this.http.get<StoreSummary[]>(`${environment.apiUrl}/seller/stores`);
   }
 
   /**
@@ -35,6 +60,10 @@ export class ProductService {
    */
   getProductById(id: number): Observable<BackendProduct> {
     return this.http.get<BackendProduct>(`${environment.apiUrl}/products/${id}`);
+  }
+
+  getSellerProductById(id: number): Observable<SellerProduct> {
+    return this.http.get<SellerProduct>(`${environment.apiUrl}/seller/products/${id}`);
   }
 
   /**
