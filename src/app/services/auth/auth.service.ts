@@ -1,10 +1,13 @@
 import { Injectable } from '@angular/core';
+import { jwtDecode } from 'jwt-decode';
+
+export type UserRole = 'Buyer' | 'Seller';
 
 export interface AuthUser {
   id: number;
   name: string;
   email: string;
-  role: 'Buyer' | 'Seller' | string;
+  role: string;
   stores?: Array<{ id: number; storeName?: string; name?: string }>;
   storeId?: number;
 }
@@ -35,6 +38,27 @@ export class AuthService {
     } catch {
       return null;
     }
+  }
+
+  getCurrentRole(): UserRole | null {
+    const token = this.getToken();
+    const user = this.getUser();
+    if (!token && !user) return null;
+
+    const role = user?.role;
+    if (token && (role === 'Buyer' || role === 'Seller')) {
+      try {
+        const { exp } = jwtDecode(token);
+        if (typeof exp === 'number' && Number.isFinite(exp) && exp > Date.now() / 1000) {
+          return role;
+        }
+      } catch {
+        // Treat unreadable tokens, including old demo tokens, as guest sessions.
+      }
+    }
+
+    this.clearToken();
+    return null;
   }
 
   /**

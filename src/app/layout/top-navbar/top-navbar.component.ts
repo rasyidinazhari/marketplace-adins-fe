@@ -1,6 +1,7 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink, RouterLinkActive } from '@angular/router';
+import { AuthService, UserRole } from '../../services/auth/auth.service';
 
 @Component({
   selector: 'app-top-navbar',
@@ -10,8 +11,12 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
   styleUrl: './top-navbar.component.css'
 })
 export class TopNavbarComponent {
+  private readonly authService = inject(AuthService);
   isMobileMenuOpen = false;
-  isUserMenuOpen = false;
+
+  get role(): UserRole | 'Guest' {
+    return this.authService.getCurrentRole() ?? 'Guest';
+  }
 
   toggleMobileMenu(): void {
     this.isMobileMenuOpen = !this.isMobileMenuOpen;

@@ -26,9 +26,7 @@ describe('Route access', () => {
 
   function loginResponse(role: 'Buyer' | 'Seller', expiresInSeconds = 3600) {
     const claims = {
-      userId: '1',
       exp: Math.floor(Date.now() / 1000) + expiresInSeconds,
-      'http://schemas.microsoft.com/ws/2008/06/identity/claims/role': role,
     };
     const payload = btoa(JSON.stringify(claims)).replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_');
     return {
