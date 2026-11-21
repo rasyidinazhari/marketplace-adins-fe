@@ -7,9 +7,8 @@ import { CompactFooterComponent } from '../../../layout/compact-footer/compact-f
 import { CartService } from '../../../services/cart/cart.service';
 import { CartItemResponse } from '../../../models/cart.model';
 
-// Interface lokal untuk kebutuhan UI
 export interface CartItem {
-  id: number;       // Cart ID
+  id: number;
   productId: number;
   name: string;
   store: string;
@@ -48,7 +47,6 @@ export class CartComponent implements OnInit {
     this.isLoading = true;
     this.cartService.getCartItems().subscribe({
       next: (response: CartItemResponse[]) => {
-        // Mapping data dari API ke format UI
         this.items = response.map(item => ({
           id: item.id,
           productId: item.productId,
@@ -57,7 +55,7 @@ export class CartComponent implements OnInit {
           price: item.totalPrice / item.quantity, 
           quantity: item.quantity,
           image: this.defaultImage, 
-          selected: true // Default terpilih saat dimuat
+          selected: true 
         }));
         
         this.isLoading = false;
@@ -96,7 +94,7 @@ export class CartComponent implements OnInit {
     storeItems.forEach(i => i.selected = nextState);
   }
 
-  // --- GETTER UNTUK SELEKSI GLOBAL (SELECT ALL) ---
+  // --- GETTER UNTUK SELEKSI GLOBAL ---
   get allSelected(): boolean {
     return this.items.length > 0 && this.items.every(i => i.selected);
   }
@@ -111,12 +109,12 @@ export class CartComponent implements OnInit {
     const newQty = item.quantity + delta;
     if (newQty >= 1) {
       const oldQty = item.quantity;
-      item.quantity = newQty; // Optimistic UI
+      item.quantity = newQty; 
       
       const newTotalPrice = item.price * newQty;
 
       const payload = {
-        userId: 1, // Asumsi backend menggunakan JWT untuk ID asli
+        userId: 1, 
         productId: item.productId,
         quantity: newQty,
         totalPrice: newTotalPrice
@@ -126,7 +124,7 @@ export class CartComponent implements OnInit {
         next: () => {},
         error: (err) => {
           console.error('Gagal update kuantitas', err);
-          item.quantity = oldQty; // Rollback
+          item.quantity = oldQty; 
         }
       });
     }
@@ -164,13 +162,14 @@ export class CartComponent implements OnInit {
     return this.selectedItems.reduce((acc, curr) => acc + (curr.price * curr.quantity), 0);
   }
 
+  // Diupdate: Hanya Subtotal - Diskon (Biaya layanan dihapus)
   get finalTotal(): number {
     const total = this.subtotal - (this.isVoucherApplied ? this.discountAmount : 0);
-    return Math.max(0, total);
+    return Math.max(0, total); 
   }
 
   applyVoucher(): void {
-    if (this.voucherCode.trim().toUpperCase() === 'WARUNGADINS50') {
+    if (this.voucherCode.trim().toUpperCase() === 'WARANGADINS50') {
       this.isVoucherApplied = true;
       this.discountAmount = 50000;
     } else {

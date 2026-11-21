@@ -21,7 +21,7 @@
     <!-- Left Column (Checkout Details) -->
     <div class="lg:col-span-2 space-y-6">
       
-      <!-- 1. Alamat Pengiriman Card (Shadcn style) -->
+      <!-- 1. Alamat Pengiriman Card -->
       <div class="rounded-xl border border-zinc-200/80 bg-white p-6 shadow-2xs space-y-4">
         <div class="flex items-center justify-between pb-3 border-b border-zinc-100">
           <div class="flex items-center gap-2">
@@ -31,27 +31,32 @@
           <button type="button" 
                   (click)="openAddressModal()" 
                   class="text-xs font-semibold text-zinc-700 hover:text-zinc-950 border border-zinc-200 px-2.5 py-1 rounded-md hover:bg-zinc-50 transition-colors shadow-2xs">
-            Ubah Alamat
+            {{ shippingAddress.id === 0 ? 'Pilih Alamat' : 'Ubah Alamat' }}
           </button>
         </div>
 
-        <div class="flex items-start gap-3">
-          <div class="p-2 rounded-lg bg-zinc-100 text-zinc-600">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-          </div>
-          <div class="space-y-1">
-            <div class="flex items-center gap-2">
-              <span class="text-sm font-semibold text-zinc-900">{{ shippingAddress.name }}</span>
-              <span class="text-xs text-zinc-500">({{ shippingAddress.phone }})</span>
-              <span class="rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-semibold text-zinc-700 border border-zinc-200">
-                {{ shippingAddress.label }}
-              </span>
+        @if (isLoadingAddress) {
+          <div class="text-center py-4 text-sm text-zinc-500 animate-pulse">Memuat alamat...</div>
+        } @else {
+          <div class="flex items-start gap-3">
+            <div class="p-2 rounded-lg bg-zinc-100 text-zinc-600">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
             </div>
-            <p class="text-xs text-zinc-600 leading-relaxed">
-              {{ shippingAddress.address }}, {{ shippingAddress.city }} - {{ shippingAddress.postalCode }}
-            </p>
+            <div class="space-y-1">
+              @if (shippingAddress.id === 0) {
+                <p class="text-xs text-zinc-500 italic">{{ shippingAddress.address }}</p>
+              } @else {
+                <div class="flex items-center gap-2">
+                  <span class="text-sm font-semibold text-zinc-900">{{ shippingAddress.name }}</span>
+                  <span class="text-xs text-zinc-500">({{ shippingAddress.phone }})</span>
+                </div>
+                <p class="text-xs text-zinc-600 leading-relaxed">
+                  {{ shippingAddress.address }}, {{ shippingAddress.city }} - {{ shippingAddress.postalCode }}
+                </p>
+              }
+            </div>
           </div>
-        </div>
+        }
       </div>
 
       <!-- 2. Pilihan Pengiriman Card -->
@@ -74,7 +79,6 @@
                        [value]="courier.id" 
                        [(ngModel)]="selectedCourier" 
                        class="rounded-full border-zinc-300 text-zinc-900 focus:ring-zinc-950 h-4 w-4 pointer-events-none" />
-                <span class="text-xs font-bold text-zinc-950">Rp {{ courier.price | number:'1.0-0' }}</span>
               </div>
               <span class="text-xs font-semibold text-zinc-900">{{ courier.name }}</span>
               <span class="text-[11px] text-zinc-500 mt-0.5">Estimasi {{ courier.eta }}</span>
@@ -135,22 +139,29 @@
         <h2 class="text-sm font-semibold text-zinc-950 pb-3 border-b border-zinc-100">
           Rincian Barang yang Dipesan
         </h2>
-        <div class="space-y-3">
-          @for (item of orderItems; track item.name) {
-            <div class="flex items-center justify-between gap-4 py-2 border-b border-zinc-50 last:border-0">
-              <div class="flex items-center gap-3 min-w-0">
-                <img [src]="item.image" [alt]="item.name" class="w-12 h-12 rounded-md object-cover bg-zinc-100 border border-zinc-200/60" />
-                <div class="truncate">
-                  <div class="text-xs font-medium text-zinc-900 truncate">{{ item.name }}</div>
-                  <div class="text-[11px] text-zinc-500">{{ item.qty }}x • Rp {{ item.price | number:'1.0-0' }}</div>
+        
+        @if (isLoadingCart) {
+          <div class="text-center py-8 text-sm text-zinc-500">Memuat data keranjang...</div>
+        } @else if (orderItems.length === 0) {
+          <div class="text-center py-8 text-sm text-zinc-500">Keranjang Anda kosong.</div>
+        } @else {
+          <div class="space-y-3">
+            @for (item of orderItems; track item.productId) {
+              <div class="flex items-center justify-between gap-4 py-2 border-b border-zinc-50 last:border-0">
+                <div class="flex items-center gap-3 min-w-0">
+                  <img [src]="item.image" [alt]="item.name" class="w-12 h-12 rounded-md object-cover bg-zinc-100 border border-zinc-200/60" />
+                  <div class="truncate">
+                    <div class="text-xs font-medium text-zinc-900 truncate">{{ item.name }}</div>
+                    <div class="text-[11px] text-zinc-500">{{ item.qty }}x • Rp {{ item.price | number:'1.0-0' }}</div>
+                  </div>
+                </div>
+                <div class="text-xs font-bold text-zinc-950 whitespace-nowrap">
+                  Rp {{ (item.price * item.qty) | number:'1.0-0' }}
                 </div>
               </div>
-              <div class="text-xs font-bold text-zinc-950 whitespace-nowrap">
-                Rp {{ (item.price * item.qty) | number:'1.0-0' }}
-              </div>
-            </div>
-          }
-        </div>
+            }
+          </div>
+        }
       </div>
 
     </div>
@@ -164,20 +175,8 @@
 
         <div class="space-y-2 text-xs text-zinc-600">
           <div class="flex justify-between">
-            <span>Subtotal Produk</span>
+            <span>Subtotal Produk ({{ orderItems.length }} Barang)</span>
             <span class="font-medium text-zinc-900">Rp {{ subtotal | number:'1.0-0' }}</span>
-          </div>
-          <div class="flex justify-between">
-            <span>Biaya Ongkos Kirim</span>
-            <span class="font-medium text-zinc-900">Rp {{ currentShippingCost | number:'1.0-0' }}</span>
-          </div>
-          <div class="flex justify-between text-emerald-600">
-            <span>Kupon Diskon Toko</span>
-            <span class="font-medium">- Rp {{ discount | number:'1.0-0' }}</span>
-          </div>
-          <div class="flex justify-between">
-            <span>Biaya Layanan</span>
-            <span class="font-medium text-zinc-900">Rp {{ serviceFee | number:'1.0-0' }}</span>
           </div>
         </div>
 
@@ -189,8 +188,8 @@
         </div>
 
         <button (click)="processPayment()" 
-                [disabled]="isProcessing"
-                class="w-full inline-flex items-center justify-center gap-2 rounded-md bg-zinc-900 px-4 py-3 text-sm font-semibold text-zinc-50 shadow-sm hover:bg-zinc-800 transition-colors disabled:opacity-50">
+                [disabled]="isProcessing || isLoadingCart || orderItems.length === 0"
+                class="w-full inline-flex items-center justify-center gap-2 rounded-md bg-zinc-900 px-4 py-3 text-sm font-semibold text-zinc-50 shadow-sm hover:bg-zinc-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
           <span *ngIf="!isProcessing">Bayar Sekarang</span>
           <span *ngIf="isProcessing" class="flex items-center gap-2">
             <svg class="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
@@ -208,7 +207,7 @@
 
 </main>
 
-<!-- Modal Ubah / Pilih Alamat (Menggunakan Komponen Reusable Modal) -->
+<!-- Modal Ubah / Pilih Alamat -->
 <app-modal 
   [(isOpen)]="isAddressModalOpen"
   [title]="addressMode === 'select' ? 'Pilih Alamat Pengiriman' : 'Tambah Alamat Pengiriman Baru'"
@@ -232,57 +231,58 @@
 
       <!-- Address List Cards -->
       <div class="space-y-3">
-        @for (addr of savedAddresses; track addr.id) {
-          <div 
-            (click)="selectAddress(addr.id)"
-            [class.border-zinc-950]="tempSelectedAddressId === addr.id"
-            [class.bg-zinc-50]="tempSelectedAddressId === addr.id"
-            [class.ring-1]="tempSelectedAddressId === addr.id"
-            [class.ring-zinc-950]="tempSelectedAddressId === addr.id"
-            [class.border-zinc-200]="tempSelectedAddressId !== addr.id"
-            class="group relative flex items-start gap-3.5 p-4 rounded-xl border bg-white hover:border-zinc-300 transition-all cursor-pointer shadow-2xs">
-            
-            <!-- Radio check indicator -->
-            <div class="pt-0.5">
-              <div 
-                [class.border-zinc-900]="tempSelectedAddressId === addr.id"
-                [class.bg-zinc-900]="tempSelectedAddressId === addr.id"
-                class="w-4 h-4 rounded-full border border-zinc-300 flex items-center justify-center transition-colors">
-                @if (tempSelectedAddressId === addr.id) {
-                  <div class="w-1.5 h-1.5 rounded-full bg-white"></div>
-                }
-              </div>
-            </div>
-
-            <!-- Address Details -->
-            <div class="space-y-1.5 flex-1 pr-6">
-              <div class="flex flex-wrap items-center gap-2">
-                <span class="text-xs font-bold text-zinc-950">{{ addr.name }}</span>
-                <span class="text-xs text-zinc-500 font-medium">({{ addr.phone }})</span>
-                <span class="rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-semibold text-zinc-700 border border-zinc-200">
-                  {{ addr.label }}
-                </span>
-                @if (addr.isPrimary) {
-                  <span class="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 border border-emerald-200">
-                    Utama
-                  </span>
-                }
-              </div>
-              <p class="text-xs text-zinc-600 leading-relaxed">
-                {{ addr.address }}
-              </p>
-              <div class="text-[11px] font-medium text-zinc-500">
-                {{ addr.city }} - {{ addr.postalCode }}
-              </div>
-            </div>
-
-            <!-- Active check badge -->
-            @if (tempSelectedAddressId === addr.id) {
-              <span class="absolute top-3.5 right-3.5 text-zinc-900">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
-              </span>
-            }
+        @if (savedAddresses.length === 0) {
+          <div class="text-center py-6 text-sm text-zinc-500 border border-dashed border-zinc-200 rounded-xl">
+            Belum ada alamat tersimpan. Silakan tambah alamat baru.
           </div>
+        } @else {
+          @for (addr of savedAddresses; track addr.id) {
+            <div 
+              (click)="selectAddress(addr.id)"
+              [class.border-zinc-950]="tempSelectedAddressId === addr.id"
+              [class.bg-zinc-50]="tempSelectedAddressId === addr.id"
+              [class.ring-1]="tempSelectedAddressId === addr.id"
+              [class.ring-zinc-950]="tempSelectedAddressId === addr.id"
+              [class.border-zinc-200]="tempSelectedAddressId !== addr.id"
+              class="group relative flex items-start gap-3.5 p-4 rounded-xl border bg-white hover:border-zinc-300 transition-all cursor-pointer shadow-2xs">
+              
+              <!-- Radio check indicator -->
+              <div class="pt-0.5">
+                <div 
+                  [class.border-zinc-900]="tempSelectedAddressId === addr.id"
+                  [class.bg-zinc-900]="tempSelectedAddressId === addr.id"
+                  class="w-4 h-4 rounded-full border border-zinc-300 flex items-center justify-center transition-colors">
+                  @if (tempSelectedAddressId === addr.id) {
+                    <div class="w-1.5 h-1.5 rounded-full bg-white"></div>
+                  }
+                </div>
+              </div>
+
+              <!-- Address Details -->
+              <div class="space-y-1.5 flex-1 pr-6">
+                <div class="flex flex-wrap items-center gap-2">
+                  <span class="text-xs font-bold text-zinc-950">{{ addr.name }}</span>
+                  <span class="text-xs text-zinc-500 font-medium">({{ addr.phone }})</span>
+                  <span class="rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-semibold text-zinc-700 border border-zinc-200">
+                    {{ addr.label }}
+                  </span>
+                </div>
+                <p class="text-xs text-zinc-600 leading-relaxed">
+                  {{ addr.address }}
+                </p>
+                <div class="text-[11px] font-medium text-zinc-500">
+                  {{ addr.city }} - {{ addr.postalCode }}
+                </div>
+              </div>
+
+              <!-- Active check badge -->
+              @if (tempSelectedAddressId === addr.id) {
+                <span class="absolute top-3.5 right-3.5 text-zinc-900">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                </span>
+              }
+            </div>
+          }
         }
       </div>
     </div>
@@ -395,7 +395,8 @@
       <button 
         type="button"
         (click)="confirmSelectAddress()"
-        class="px-5 py-2 rounded-md bg-zinc-900 text-xs font-semibold text-white hover:bg-zinc-800 transition-colors shadow-2xs">
+        [disabled]="tempSelectedAddressId === 0"
+        class="px-5 py-2 rounded-md bg-zinc-900 text-xs font-semibold text-white hover:bg-zinc-800 transition-colors shadow-2xs disabled:opacity-50">
         Pilih Alamat Ini
       </button>
     }
@@ -410,8 +411,9 @@
       <button 
         type="button"
         (click)="saveNewAddress()"
-        class="px-5 py-2 rounded-md bg-zinc-900 text-xs font-semibold text-white hover:bg-zinc-800 transition-colors shadow-2xs">
-        Simpan & Gunakan Alamat
+        [disabled]="isProcessing"
+        class="px-5 py-2 rounded-md bg-zinc-900 text-xs font-semibold text-white hover:bg-zinc-800 transition-colors shadow-2xs disabled:opacity-50">
+        {{ isProcessing ? 'Menyimpan...' : 'Simpan & Gunakan Alamat' }}
       </button>
     }
   </div>

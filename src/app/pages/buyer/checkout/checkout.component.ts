@@ -1,10 +1,15 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { TopNavbarComponent } from '../../../layout/top-navbar/top-navbar.component';
 import { CompactFooterComponent } from '../../../layout/compact-footer/compact-footer.component';
 import { ModalComponent } from '../../../components/ui/modal/modal.component';
+import { CartService } from '../../../services/cart/cart.service';
+import { OrderService } from '../../../services/order/order.service';
+import { AddressService } from '../../../services/address/address.service';
+import { CartItemResponse } from '../../../models/cart.model';
+import { AddressPayload, AddressResponse } from '../../../models/address.model';
 
 export interface AddressItem {
   id: number;
@@ -17,6 +22,15 @@ export interface AddressItem {
   isPrimary?: boolean;
 }
 
+export interface CheckoutItem {
+  productId: number;
+  name: string;
+  price: number;
+  qty: number;
+  image: string;
+  storeId: number;
+}
+
 @Component({
   selector: 'app-checkout',
   standalone: true,
@@ -24,56 +38,43 @@ export interface AddressItem {
   templateUrl: './checkout.component.html',
   styleUrl: './checkout.component.css'
 })
-export class CheckoutComponent {
+export class CheckoutComponent implements OnInit {
+  private cartSvc = inject(CartService);
+  private orderSvc = inject(OrderService);
+  private addressSvc = inject(AddressService);
+  private cdr = inject(ChangeDetectorRef);
+  private router = inject(Router);
+
   selectedCourier = 'reguler';
   selectedPayment = 'bca_va';
   isProcessing = false;
+  isLoadingCart = false;
+  isLoadingAddress = false;
 
   // Modal Ubah Alamat State
   isAddressModalOpen = false;
   addressMode: 'select' | 'form' = 'select';
-  tempSelectedAddressId = 1;
+  tempSelectedAddressId = 0;
 
-  savedAddresses: AddressItem[] = [
-    {
-      id: 1,
-      name: 'Budi Santoso',
-      phone: '0812-3456-7890',
-      address: 'Jl. Jenderal Sudirman Kav. 52-53, SCBD, Gedung Menara Mandiri Lt. 12',
-      city: 'Jakarta Selatan',
-      postalCode: '12190',
-      label: 'Kantor',
-      isPrimary: true
-    },
-    {
-      id: 2,
-      name: 'Budi Santoso (Rumah)',
-      phone: '0812-3456-7890',
-      address: 'Cluster Harmoni Residence Blok B4 No. 12, Kel. Pondok Indah, Kec. Kebayoran Lama',
-      city: 'Jakarta Selatan',
-      postalCode: '12240',
-      label: 'Rumah',
-      isPrimary: false
-    },
-    {
-      id: 3,
-      name: 'Budi Santoso (Studio)',
-      phone: '0813-9876-5432',
-      address: 'Apartemen Casa Domaine Tower 1 Lt. 25 Unit 25A, Jl. K.H. Mas Mansyur Kav. 1',
-      city: 'Jakarta Pusat',
-      postalCode: '10220',
-      label: 'Apartemen',
-      isPrimary: false
-    }
-  ];
-
-  shippingAddress: AddressItem = { ...this.savedAddresses[0] };
+  // Data Alamat
+  savedAddresses: AddressItem[] = [];
+  
+  // Alamat default (jika belum pilih)
+  shippingAddress: AddressItem = {
+    id: 0,
+    name: 'Pilih Alamat',
+    phone: '-',
+    address: 'Silakan pilih alamat pengiriman terlebih dahulu',
+    city: '',
+    postalCode: '',
+    label: '',
+  };
 
   newAddressForm = {
     name: '',
     phone: '',
     label: 'Rumah',
-    city: 'Jakarta Selatan',
+    city: '',
     postalCode: '',
     address: '',
     isPrimary: false
@@ -91,44 +92,116 @@ export class CheckoutComponent {
     { id: 'qris', name: 'QRIS (GoPay, OVO, ShopeePay)', iconType: 'qr', desc: 'Scan barcode melalui aplikasi e-wallet' }
   ];
 
-  orderItems = [
-    {
-      name: 'Wireless Noise-Cancelling Headphones Pro ANC',
-      price: 1499000,
-      qty: 1,
-      image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600&auto=format&fit=crop&q=80'
-    },
-    {
-      name: 'Signature Arabica Coffee Beans Single Origin 250g',
-      price: 85000,
-      qty: 2,
-      image: 'https://images.unsplash.com/photo-1559056199-641a0ac8b55e?w=600&auto=format&fit=crop&q=80'
-    }
-  ];
+  orderItems: CheckoutItem[] = []; 
 
-  subtotal = 1669000;
-  discount = 50000;
-  serviceFee = 1000;
+  ngOnInit(): void {
+    this.loadCartData();
+    this.loadAddresses();
+  }
 
-  constructor(private router: Router) {}
+  // --- 1. FETCH CART ---
+  loadCartData(): void {
+    this.isLoadingCart = true;
+    this.cartSvc.getCartItems().subscribe({
+      next: (response: CartItemResponse[]) => {
+        this.orderItems = response.map(item => ({
+          productId: item.productId,
+          name: item.productName,
+          price: item.totalPrice / item.quantity,
+          qty: item.quantity,
+          image: this.cartSvc.defaultPlaceholder,
+          storeId: item.storeId
+        }));
+        this.isLoadingCart = false;
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        console.error('Gagal mengambil data keranjang', err);
+        this.isLoadingCart = false;
+      }
+    });
+  }
+
+  // --- 2. FETCH ADDRESSES ---
+  loadAddresses(): void {
+    this.isLoadingAddress = true;
+    this.addressSvc.getAllAddresses().subscribe({
+      next: (response: AddressResponse[]) => {
+        this.savedAddresses = response.map(a => ({
+          id: a.id,
+          name: a.recipientName,
+          phone: a.phoneNumber,
+          address: a.fullAddress,
+          city: a.city,
+          postalCode: a.postalCode,
+          label: 'Alamat', 
+          isPrimary: false
+        }));
+
+        if (this.savedAddresses.length > 0) {
+          this.shippingAddress = { ...this.savedAddresses[0] };
+          this.tempSelectedAddressId = this.savedAddresses[0].id;
+        }
+        
+        this.isLoadingAddress = false;
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        console.error('Gagal mengambil alamat', err);
+        this.isLoadingAddress = false;
+      }
+    });
+  }
+
+  get subtotal(): number {
+    return this.orderItems.reduce((acc, item) => acc + (item.price * item.qty), 0);
+  }
 
   get currentShippingCost(): number {
     const courier = this.couriers.find(c => c.id === this.selectedCourier);
     return courier ? courier.price : 15000;
   }
 
+  // Voucher & Diskon dihapus, grandTotal hanya Subtotal
   get grandTotal(): number {
-    return this.subtotal - this.discount + this.currentShippingCost + this.serviceFee;
+    return this.subtotal; 
   }
 
   processPayment(): void {
+    if (this.orderItems.length === 0) {
+      alert('Keranjang Anda kosong.');
+      return;
+    }
+    if (this.shippingAddress.id === 0) {
+      alert('Silakan pilih alamat pengiriman terlebih dahulu.');
+      this.openAddressModal();
+      return;
+    }
+
     this.isProcessing = true;
-    setTimeout(() => {
-      this.isProcessing = false;
-      this.router.navigate(['/buyer/orders/1']);
-    }, 900);
+
+    const storeId = this.orderItems[0].storeId;
+    
+    // Payload tanpa voucherCode
+    const payload = {
+      storeId: storeId,
+      addressId: this.shippingAddress.id
+    };
+
+    this.orderSvc.createOrder(payload).subscribe({
+      next: (res) => {
+        this.isProcessing = false;
+        this.router.navigate(['/buyer/orders', res.id]);
+      },
+      error: (err) => {
+        this.isProcessing = false;
+        console.error('Gagal membuat pesanan', err);
+        alert(err.error?.message || 'Gagal memproses pembayaran. Silakan coba lagi.');
+      }
+    });
   }
 
+  // --- FUNGSI MODAL ALAMAT ---
   openAddressModal(): void {
     this.tempSelectedAddressId = this.shippingAddress.id;
     this.addressMode = 'select';
@@ -154,13 +227,7 @@ export class CheckoutComponent {
   switchToNewAddress(): void {
     this.addressMode = 'form';
     this.newAddressForm = {
-      name: '',
-      phone: '',
-      label: 'Rumah',
-      city: 'Jakarta Selatan',
-      postalCode: '',
-      address: '',
-      isPrimary: false
+      name: '', phone: '', label: 'Rumah', city: '', postalCode: '', address: '', isPrimary: false
     };
   }
 
@@ -168,32 +235,35 @@ export class CheckoutComponent {
     this.addressMode = 'select';
   }
 
+  // --- SIMPAN ALAMAT BARU KE API ---
   saveNewAddress(): void {
     if (!this.newAddressForm.name || !this.newAddressForm.phone || !this.newAddressForm.address) {
       alert('Silakan lengkapi nama penerima, nomor telepon, dan alamat lengkap.');
       return;
     }
 
-    const newId = Date.now();
-    const newAddress: AddressItem = {
-      id: newId,
-      name: this.newAddressForm.name,
-      phone: this.newAddressForm.phone,
-      label: this.newAddressForm.label || 'Alamat Baru',
+    const payload: AddressPayload = {
+      userId: 1, // Abaikan
+      recipientName: this.newAddressForm.name,
+      phoneNumber: this.newAddressForm.phone,
       city: this.newAddressForm.city || 'Jakarta',
       postalCode: this.newAddressForm.postalCode || '10110',
-      address: this.newAddressForm.address,
-      isPrimary: this.newAddressForm.isPrimary
+      note: this.newAddressForm.address 
     };
 
-    if (newAddress.isPrimary) {
-      this.savedAddresses.forEach(a => a.isPrimary = false);
-    }
-
-    this.savedAddresses.unshift(newAddress);
-    this.shippingAddress = { ...newAddress };
-    this.tempSelectedAddressId = newId;
-    this.addressMode = 'select';
-    this.isAddressModalOpen = false;
+    this.isProcessing = true;
+    this.addressSvc.createAddress(payload).subscribe({
+      next: (res) => {
+        this.isProcessing = false;
+        this.isAddressModalOpen = false;
+        this.loadAddresses(); 
+        alert('Alamat berhasil ditambahkan!');
+      },
+      error: (err) => {
+        this.isProcessing = false;
+        console.error('Gagal menyimpan alamat', err);
+        alert('Gagal menyimpan alamat. Pastikan Anda sudah login.');
+      }
+    });
   }
 }

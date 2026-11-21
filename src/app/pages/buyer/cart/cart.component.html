@@ -152,7 +152,7 @@
             }
           </div>
 
-          <!-- Price Breakdown -->
+          <!-- Price Breakdown (Biaya Layanan Dihapus) -->
           <div class="space-y-2 text-xs text-zinc-600 pt-2 border-t border-zinc-100">
             <div class="flex justify-between">
               <span>Total Harga ({{ selectedItems.length }} barang)</span>
@@ -164,17 +164,13 @@
                 <span class="font-medium">- Rp {{ discountAmount | number:'1.0-0' }}</span>
               </div>
             }
-            <div class="flex justify-between">
-              <span>Biaya Layanan</span>
-              <span class="font-medium text-zinc-900">Rp 1.000</span>
-            </div>
           </div>
 
-          <!-- Total Due -->
+          <!-- Total Due (Langsung finalTotal) -->
           <div class="pt-4 border-t border-zinc-200 flex items-baseline justify-between">
             <span class="text-sm font-semibold text-zinc-950">Total Tagihan</span>
             <span class="text-lg font-extrabold text-zinc-950">
-              Rp {{ (finalTotal + (selectedItems.length > 0 ? 1000 : 0)) | number:'1.0-0' }}
+              Rp {{ finalTotal | number:'1.0-0' }}
             </span>
           </div>
 
