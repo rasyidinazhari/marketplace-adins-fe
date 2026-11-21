@@ -1,7 +1,7 @@
 <app-top-navbar></app-top-navbar>
 
 <main class="flex-1 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
-  
+
   <nav class="flex items-center gap-2 text-xs text-zinc-500 mb-6">
     <a [routerLink]="'/'" class="hover:text-zinc-900 transition-colors">Beranda</a>
     <span>/</span>
@@ -10,143 +10,259 @@
     <span class="text-zinc-900 font-medium">Detail Pesanan</span>
   </nav>
 
-  <!-- Header Card (Shadcn style) -->
-  <div class="rounded-xl border border-zinc-200/80 bg-white p-6 shadow-2xs mb-6 space-y-4">
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-zinc-100">
-      <div>
-        <div class="text-xs text-zinc-500">Nomor Invoice</div>
-        <h1 class="text-lg font-bold text-zinc-950 mt-0.5">{{ order.orderNumber }}</h1>
-        <div class="text-xs text-zinc-400 mt-0.5">Waktu Transaksi: {{ order.date }}</div>
+  @if (isLoading) {
+    <div class="rounded-xl border border-zinc-200/80 bg-white p-10 text-center text-sm text-zinc-500 shadow-2xs animate-pulse">
+      Memuat detail pesanan...
+    </div>
+  } @else if (errorMessage) {
+    <div class="rounded-xl border border-red-200 bg-red-50 p-6 text-center space-y-3">
+      <p class="text-sm text-red-700">{{ errorMessage }}</p>
+      <div class="flex items-center justify-center gap-2">
+        @if (orderId) {
+          <button type="button" (click)="loadOrder()"
+                  class="px-4 py-2 rounded-md bg-zinc-900 text-xs font-semibold text-white hover:bg-zinc-800 transition-colors">
+            Coba lagi
+          </button>
+        }
+        <a [routerLink]="['/buyer/orders']"
+           class="px-4 py-2 rounded-md border border-zinc-200 bg-white text-xs font-semibold text-zinc-700 hover:bg-zinc-50 transition-colors">
+          Kembali ke Daftar Pesanan
+        </a>
       </div>
-      <div>
-        <span class="rounded-full bg-blue-50 text-blue-700 border border-blue-200 px-3 py-1 text-xs font-semibold">
-          {{ order.status }}
-        </span>
+    </div>
+  } @else if (order) {
+
+    <!-- Header Card -->
+    <div class="rounded-xl border border-zinc-200/80 bg-white p-6 shadow-2xs mb-6 space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-zinc-100">
+        <div>
+          <div class="text-xs text-zinc-500">Nomor Pesanan</div>
+          <h1 class="text-lg font-bold text-zinc-950 mt-0.5">{{ order.orderNumber }}</h1>
+          <div class="text-xs text-zinc-400 mt-0.5">Waktu Transaksi: {{ order.date }}</div>
+        </div>
+        <div>
+          <span class="rounded-full border px-3 py-1 text-xs font-semibold"
+                [class.bg-amber-50]="order.statusTone === 'pending'"
+                [class.text-amber-700]="order.statusTone === 'pending'"
+                [class.border-amber-200]="order.statusTone === 'pending'"
+                [class.bg-blue-50]="order.statusTone === 'active'"
+                [class.text-blue-700]="order.statusTone === 'active'"
+                [class.border-blue-200]="order.statusTone === 'active'"
+                [class.bg-emerald-50]="order.statusTone === 'done'"
+                [class.text-emerald-700]="order.statusTone === 'done'"
+                [class.border-emerald-200]="order.statusTone === 'done'"
+                [class.bg-red-50]="order.statusTone === 'cancelled'"
+                [class.text-red-700]="order.statusTone === 'cancelled'"
+                [class.border-red-200]="order.statusTone === 'cancelled'">
+            {{ order.status }}
+          </span>
+        </div>
+      </div>
+
+      <!-- Stepper Timeline -->
+      <div class="pt-2">
+        <div class="text-xs font-semibold text-zinc-900 uppercase tracking-wider mb-4">Status Pengiriman</div>
+        <div class="relative pl-6 space-y-6 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-zinc-200">
+          @for (step of timeline; track step.title) {
+            <div class="relative flex items-start gap-3">
+              <span class="absolute -left-6 mt-1 flex h-4 w-4 items-center justify-center rounded-full"
+                    [class.bg-zinc-900]="step.done"
+                    [class.bg-zinc-300]="!step.done">
+                @if (step.done) {
+                  <span class="h-1.5 w-1.5 rounded-full bg-white"></span>
+                }
+              </span>
+              <div class="space-y-0.5">
+                <div class="text-xs font-semibold" [class.text-zinc-950]="step.done" [class.text-zinc-400]="!step.done">
+                  {{ step.title }}
+                  @if (step.current) {
+                    <span class="ml-2 rounded-full bg-blue-100 text-blue-700 text-[10px] px-2 py-0.5 font-bold">Terkini</span>
+                  }
+                </div>
+                @if (step.time) {
+                  <div class="text-[11px] text-zinc-400">{{ step.time }}</div>
+                }
+              </div>
+            </div>
+          }
+        </div>
       </div>
     </div>
 
-    <!-- Stepper Timeline -->
-    <div class="pt-2">
-      <div class="text-xs font-semibold text-zinc-900 uppercase tracking-wider mb-4">Status Pengiriman</div>
-      <div class="relative pl-6 space-y-6 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-zinc-200">
-        @for (step of timeline; track step.title) {
-          <div class="relative flex items-start gap-3">
-            <span class="absolute -left-6 mt-1 flex h-4 w-4 items-center justify-center rounded-full"
-                  [class.bg-zinc-900]="step.done"
-                  [class.bg-zinc-300]="!step.done">
-              <span *ngIf="step.done" class="h-1.5 w-1.5 rounded-full bg-white"></span>
-            </span>
-            <div class="space-y-0.5">
-              <div class="text-xs font-semibold" [class.text-zinc-950]="step.done" [class.text-zinc-400]="!step.done">
-                {{ step.title }}
-                <span *ngIf="step.current" class="ml-2 rounded-full bg-blue-100 text-blue-700 text-[10px] px-2 py-0.5 font-bold">Terkini</span>
-              </div>
-              <div class="text-[11px] text-zinc-400">{{ step.time }}</div>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+
+      <!-- Info Pengiriman Card -->
+      <div class="rounded-xl border border-zinc-200/80 bg-white p-5 shadow-2xs space-y-3">
+        <div class="text-xs font-semibold text-zinc-900 uppercase tracking-wider">Kurir & Resi</div>
+        <div class="space-y-2 text-xs">
+          <div>
+            <span class="text-zinc-500">Ekspedisi:</span>
+            <div class="font-semibold text-zinc-900 mt-0.5">{{ order.courier }}</div>
+          </div>
+          <div>
+            <span class="text-zinc-500">Nomor Resi:</span>
+            <div class="flex items-center gap-2 mt-0.5">
+              <span class="font-mono font-semibold text-zinc-900">{{ order.trackingNumber }}</span>
+              @if (order.trackingNumber !== '-') {
+                <button (click)="copyTracking()" class="text-[11px] text-zinc-500 hover:text-zinc-950 underline">
+                  {{ isCopied ? 'Tersalin!' : 'Salin' }}
+                </button>
+              }
             </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Info Alamat Card -->
+      <div class="rounded-xl border border-zinc-200/80 bg-white p-5 shadow-2xs space-y-3">
+        <div class="text-xs font-semibold text-zinc-900 uppercase tracking-wider">Alamat Penerima</div>
+        <div class="text-xs space-y-1">
+          <div class="font-semibold text-zinc-900">{{ order.shippingAddress.name }}</div>
+          <div class="text-zinc-500">{{ order.shippingAddress.phone }}</div>
+          <div class="text-zinc-600 leading-relaxed">
+            {{ order.shippingAddress.address }}
+            @if (order.shippingAddress.city) {
+              , {{ order.shippingAddress.city }} - {{ order.shippingAddress.postalCode }}
+            }
+          </div>
+        </div>
+      </div>
+
+      <!-- Info Pembayaran Card -->
+      <div class="rounded-xl border border-zinc-200/80 bg-white p-5 shadow-2xs space-y-3">
+        <div class="text-xs font-semibold text-zinc-900 uppercase tracking-wider">Metode Pembayaran</div>
+        <div class="text-xs space-y-1">
+          <div class="font-semibold text-zinc-900">{{ order.paymentMethod }}</div>
+          @if (order.paidAt !== '-') {
+            <div class="text-emerald-600 font-medium text-[11px]">Lunas (Terverifikasi)</div>
+            <div class="text-zinc-400 text-[11px]">Dibayar pada {{ order.paidAt }}</div>
+          } @else {
+            <div class="text-amber-600 font-medium text-[11px]">Belum dibayar</div>
+          }
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Detail Produk & Rincian Harga -->
+    <div class="rounded-xl border border-zinc-200/80 bg-white p-6 shadow-2xs space-y-6">
+      <div class="flex items-center justify-between pb-3 border-b border-zinc-100">
+        <div class="text-xs font-semibold text-zinc-900 uppercase tracking-wider">Daftar Produk</div>
+        <span class="text-xs text-zinc-500">Toko: <strong class="text-zinc-900">{{ order.store }}</strong></span>
+      </div>
+
+      <div class="space-y-4">
+        @if (order.items.length === 0) {
+          <div class="rounded-lg bg-zinc-50 border border-zinc-200/70 p-4 flex items-center justify-between text-xs text-zinc-600">
+            <span>Ringkasan item pesanan dari toko <strong class="text-zinc-900">{{ order.store }}</strong></span>
+            <span class="font-semibold text-zinc-900">Rp {{ order.subtotal | number:'1.0-0' }}</span>
+          </div>
+        } @else {
+          @for (item of order.items; track item.name) {
+            <div class="flex items-center justify-between gap-4">
+              <div class="flex items-center gap-3">
+                <img [src]="item.image" [alt]="item.name" class="w-14 h-14 rounded-lg object-cover bg-zinc-100 border border-zinc-200/60" />
+                <div>
+                  <div class="text-sm font-semibold text-zinc-900">{{ item.name }}</div>
+                  <div class="text-xs text-zinc-500">
+                    {{ item.qty }} barang
+                    @if (item.price > 0) {
+                      x Rp {{ item.price | number:'1.0-0' }}
+                    }
+                  </div>
+                </div>
+              </div>
+              <div class="text-sm font-bold text-zinc-950">
+                @if ((item.price * item.qty) > 0) {
+                  Rp {{ (item.price * item.qty) | number:'1.0-0' }}
+                } @else {
+                  Rp {{ order.subtotal | number:'1.0-0' }}
+                }
+              </div>
+            </div>
+          }
+        }
+      </div>
+
+      <!-- Rincian Harga -->
+      <div class="pt-4 border-t border-zinc-100 max-w-sm ml-auto space-y-3">
+        <div class="text-xs font-semibold text-zinc-900 uppercase tracking-wider">Rincian Harga</div>
+
+        <div class="space-y-2 text-xs text-zinc-600">
+          <div class="flex justify-between">
+            <span>Subtotal Produk</span>
+            <span class="font-medium text-zinc-900">Rp {{ order.subtotal | number:'1.0-0' }}</span>
+          </div>
+
+          <div class="flex justify-between items-center gap-3">
+            <span class="flex items-center gap-1.5">
+              Potongan Harga
+              @if (order.voucherCode) {
+                <span class="rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+                  {{ order.voucherCode }}
+                </span>
+              }
+              @if (order.discount > 0 && order.discountPercent > 0) {
+                <span class="text-[10px] text-zinc-400">({{ order.discountPercent }}%)</span>
+              }
+            </span>
+            @if (order.discount > 0) {
+              <span class="font-medium text-emerald-600">- Rp {{ order.discount | number:'1.0-0' }}</span>
+            } @else {
+              <span class="text-zinc-400">Tidak ada potongan</span>
+            }
+          </div>
+
+          @if (order.shippingFee > 0) {
+            <div class="flex justify-between">
+              <span>Biaya Pengiriman</span>
+              <span class="font-medium text-zinc-900">Rp {{ order.shippingFee | number:'1.0-0' }}</span>
+            </div>
+          }
+
+          @if (order.serviceFee > 0) {
+            <div class="flex justify-between">
+              <span>Biaya Layanan</span>
+              <span class="font-medium text-zinc-900">Rp {{ order.serviceFee | number:'1.0-0' }}</span>
+            </div>
+          }
+        </div>
+
+        <div class="flex justify-between items-baseline pt-3 border-t border-zinc-200">
+          <span class="text-sm font-bold text-zinc-950">Total Akhir</span>
+          <span class="text-base font-extrabold text-zinc-950">Rp {{ order.total | number:'1.0-0' }}</span>
+        </div>
+
+        @if (order.discount > 0) {
+          <div class="rounded-md bg-emerald-50 border border-emerald-200 px-3 py-2 text-[11px] font-medium text-emerald-700">
+            Anda hemat Rp {{ order.discount | number:'1.0-0' }} pada pesanan ini.
           </div>
         }
       </div>
-    </div>
-  </div>
 
-  <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-    
-    <!-- Info Pengiriman Card -->
-    <div class="rounded-xl border border-zinc-200/80 bg-white p-5 shadow-2xs space-y-3">
-      <div class="text-xs font-semibold text-zinc-900 uppercase tracking-wider">Kurir & Resi</div>
-      <div class="space-y-2 text-xs">
-        <div>
-          <span class="text-zinc-500">Ekspedisi:</span>
-          <div class="font-semibold text-zinc-900 mt-0.5">{{ order.courier }}</div>
-        </div>
-        <div>
-          <span class="text-zinc-500">Nomor Resi:</span>
-          <div class="flex items-center gap-2 mt-0.5">
-            <span class="font-mono font-semibold text-zinc-900">{{ order.trackingNumber }}</span>
-            <button (click)="copyTracking()" class="text-[11px] text-zinc-500 hover:text-zinc-950 underline">
-              {{ isCopied ? 'Tersalin!' : 'Salin' }}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Info Alamat Card -->
-    <div class="rounded-xl border border-zinc-200/80 bg-white p-5 shadow-2xs space-y-3">
-      <div class="text-xs font-semibold text-zinc-900 uppercase tracking-wider">Alamat Penerima</div>
-      <div class="text-xs space-y-1">
-        <div class="font-semibold text-zinc-900">{{ order.shippingAddress.name }}</div>
-        <div class="text-zinc-500">{{ order.shippingAddress.phone }}</div>
-        <div class="text-zinc-600 leading-relaxed">{{ order.shippingAddress.address }}, {{ order.shippingAddress.city }} - {{ order.shippingAddress.postalCode }}</div>
-      </div>
-    </div>
-
-    <!-- Info Pembayaran Card -->
-    <div class="rounded-xl border border-zinc-200/80 bg-white p-5 shadow-2xs space-y-3">
-      <div class="text-xs font-semibold text-zinc-900 uppercase tracking-wider">Metode Pembayaran</div>
-      <div class="text-xs space-y-1">
-        <div class="font-semibold text-zinc-900">{{ order.paymentMethod }}</div>
-        <div class="text-emerald-600 font-medium text-[11px]">Lunas (Terverifikasi)</div>
-        <div class="text-zinc-400 text-[11px]">Dibayar pada {{ order.paidAt }}</div>
-      </div>
-    </div>
-
-  </div>
-
-  <!-- Detail Produk & Total Tagihan Card -->
-  <div class="rounded-xl border border-zinc-200/80 bg-white p-6 shadow-2xs space-y-6">
-    <div class="flex items-center justify-between pb-3 border-b border-zinc-100">
-      <div class="text-xs font-semibold text-zinc-900 uppercase tracking-wider">Daftar Produk</div>
-      <span class="text-xs text-zinc-500">Toko: <strong class="text-zinc-900">{{ order.store }}</strong></span>
-    </div>
-
-    <div class="space-y-4">
-      @for (item of order.items; track item.name) {
-        <div class="flex items-center justify-between gap-4">
-          <div class="flex items-center gap-3">
-            <img [src]="item.image" [alt]="item.name" class="w-14 h-14 rounded-lg object-cover bg-zinc-100 border border-zinc-200/60" />
-            <div>
-              <div class="text-sm font-semibold text-zinc-900">{{ item.name }}</div>
-              <div class="text-xs text-zinc-500">{{ item.qty }} barang x Rp {{ item.price | number:'1.0-0' }}</div>
-            </div>
-          </div>
-          <div class="text-sm font-bold text-zinc-950">
-            Rp {{ (item.price * item.qty) | number:'1.0-0' }}
-          </div>
+      @if (actionError) {
+        <div class="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+          {{ actionError }}
         </div>
       }
+
+      <div class="flex items-center justify-end gap-3 pt-4 border-t border-zinc-100">
+        <a [routerLink]="['/buyer/orders']" class="px-4 py-2 rounded-md border border-zinc-200 bg-white text-xs font-semibold text-zinc-700 hover:bg-zinc-50 shadow-2xs transition-colors">
+          Kembali ke Daftar Pesanan
+        </a>
+        @if (order.canComplete) {
+          <button type="button"
+                  (click)="completeOrder()"
+                  [disabled]="isUpdating"
+                  class="px-4 py-2 rounded-md bg-zinc-900 text-xs font-semibold text-white hover:bg-zinc-800 shadow-2xs transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+            {{ isUpdating ? 'Memproses...' : 'Pesanan Diterima & Selesai' }}
+          </button>
+        }
+      </div>
+
     </div>
 
-    <!-- Total Rincian -->
-    <div class="pt-4 border-t border-zinc-100 space-y-2 text-xs text-zinc-600 max-w-sm ml-auto">
-      <div class="flex justify-between">
-        <span>Subtotal Produk</span>
-        <span class="font-medium text-zinc-900">Rp {{ order.subtotal | number:'1.0-0' }}</span>
-      </div>
-      <div class="flex justify-between">
-        <span>Biaya Pengiriman</span>
-        <span class="font-medium text-zinc-900">Rp {{ order.shippingFee | number:'1.0-0' }}</span>
-      </div>
-      <div class="flex justify-between">
-        <span>Biaya Layanan</span>
-        <span class="font-medium text-zinc-900">Rp {{ order.serviceFee | number:'1.0-0' }}</span>
-      </div>
-      <div class="flex justify-between pt-2 border-t border-zinc-200 text-sm font-bold text-zinc-950">
-        <span>Total Akhir</span>
-        <span>Rp {{ order.total | number:'1.0-0' }}</span>
-      </div>
-    </div>
-
-    <div class="flex items-center justify-end gap-3 pt-4 border-t border-zinc-100">
-      <a [routerLink]="['/buyer/orders']" class="px-4 py-2 rounded-md border border-zinc-200 bg-white text-xs font-semibold text-zinc-700 hover:bg-zinc-50 shadow-2xs transition-colors">
-        Kembali ke Daftar Pesanan
-      </a>
-      <button class="px-4 py-2 rounded-md bg-zinc-900 text-xs font-semibold text-white hover:bg-zinc-800 shadow-2xs transition-colors">
-        Pesanan Diterima & Selesai
-      </button>
-    </div>
-
-  </div>
+  }
 
 </main>
 
