@@ -30,6 +30,7 @@ export class CartService {
     // Karena backend Anda memvalidasi user dari Token JWT (bukan dari body),
     // sebenarnya userId di payload tidak terlalu dibutuhkan oleh backend.
     // Tapi kita kirimkan saja sesuai interface yang ada.
+    console.log('payload')
     return this.http.post<CartItemResponse>(`${this.apiCartUrl}/items`, payload);
   }
 

@@ -29,7 +29,7 @@
   <!-- Main Content Layout (Sidebar Filter + Product Grid) -->
   <div class="grid grid-cols-1 lg:grid-cols-4 gap-8 mt-8">
     
-    <!-- Sidebar Filters (Sticky Shadcn Card) -->
+    <!-- Sidebar Filters -->
     <aside class="space-y-6">
       <div class="lg:sticky lg:top-20 z-10 space-y-6">
         <div class="rounded-xl border border-zinc-200/80 bg-white p-5 shadow-2xs space-y-6 max-h-[calc(100vh-6rem)] overflow-y-auto">
@@ -170,9 +170,11 @@
                   }
                 </div>
 
-                <a [routerLink]="['/cart']" class="inline-flex items-center justify-center px-3 py-1.5 text-xs font-medium text-zinc-900 bg-zinc-100 hover:bg-zinc-900 hover:text-white rounded-md transition-colors">
+                <!-- TOMBOL KERANJANG YANG SUDAH DIINTEGRASIKAN -->
+                <button (click)="addToCart(item)" 
+                        class="inline-flex items-center justify-center px-3 py-1.5 text-xs font-medium text-zinc-900 bg-zinc-100 hover:bg-zinc-900 hover:text-white rounded-md transition-colors">
                   + Keranjang
-                </a>
+                </button>
               </div>
             </div>
 
