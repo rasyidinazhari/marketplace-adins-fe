@@ -11,7 +11,6 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
 })
 export class TopNavbarComponent {
   isMobileMenuOpen = false;
-  isSellerMenuOpen = false;
   isUserMenuOpen = false;
 
   toggleMobileMenu(): void {
