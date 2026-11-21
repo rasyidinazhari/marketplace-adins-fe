@@ -10,6 +10,7 @@ import { OrderService } from '../../../services/order/order.service';
 import { AddressService } from '../../../services/address/address.service';
 import { CartItemResponse } from '../../../models/cart.model';
 import { AddressPayload, AddressResponse } from '../../../models/address.model';
+import { UpdateOrderStatusPayload } from '../../../models/order.model';
 
 export interface AddressItem {
   id: number;
@@ -58,7 +59,7 @@ export class CheckoutComponent implements OnInit {
 
   // Data Alamat
   savedAddresses: AddressItem[] = [];
-  
+
   // Alamat default (jika belum pilih)
   shippingAddress: AddressItem = {
     id: 0,
@@ -92,7 +93,7 @@ export class CheckoutComponent implements OnInit {
     { id: 'qris', name: 'QRIS (GoPay, OVO, ShopeePay)', iconType: 'qr', desc: 'Scan barcode melalui aplikasi e-wallet' }
   ];
 
-  orderItems: CheckoutItem[] = []; 
+  orderItems: CheckoutItem[] = [];
 
   ngOnInit(): void {
     this.loadCartData();
@@ -134,7 +135,7 @@ export class CheckoutComponent implements OnInit {
           address: a.fullAddress,
           city: a.city,
           postalCode: a.postalCode,
-          label: 'Alamat', 
+          label: 'Alamat',
           isPrimary: false
         }));
 
@@ -142,7 +143,7 @@ export class CheckoutComponent implements OnInit {
           this.shippingAddress = { ...this.savedAddresses[0] };
           this.tempSelectedAddressId = this.savedAddresses[0].id;
         }
-        
+
         this.isLoadingAddress = false;
         this.cdr.detectChanges();
       },
@@ -164,7 +165,7 @@ export class CheckoutComponent implements OnInit {
 
   // Voucher & Diskon dihapus, grandTotal hanya Subtotal
   get grandTotal(): number {
-    return this.subtotal; 
+    return this.subtotal;
   }
 
   processPayment(): void {
@@ -181,17 +182,27 @@ export class CheckoutComponent implements OnInit {
     this.isProcessing = true;
 
     const storeId = this.orderItems[0].storeId;
-    
-    // Payload tanpa voucherCode
+
     const payload = {
       storeId: storeId,
       addressId: this.shippingAddress.id
     };
 
+    const statusPayload: UpdateOrderStatusPayload = { status: 'ON_PROCESS' };
+
     this.orderSvc.createOrder(payload).subscribe({
       next: (res) => {
-        this.isProcessing = false;
-        this.router.navigate(['/buyer/orders', res.id]);
+        this.orderSvc.updateOrderStatus(res.id, statusPayload).subscribe({
+          next: () => {
+            this.isProcessing = false;
+            this.router.navigate(['/buyer/orders', res.id]);
+          },
+          error: (err) => {
+            this.isProcessing = false;
+            console.error('Gagal memperbarui status pesanan', err);
+            this.router.navigate(['/buyer/orders', res.id]);
+          }
+        });
       },
       error: (err) => {
         this.isProcessing = false;
@@ -248,7 +259,7 @@ export class CheckoutComponent implements OnInit {
       phoneNumber: this.newAddressForm.phone,
       city: this.newAddressForm.city || 'Jakarta',
       postalCode: this.newAddressForm.postalCode || '10110',
-      note: this.newAddressForm.address 
+      note: this.newAddressForm.address
     };
 
     this.isProcessing = true;
@@ -256,7 +267,7 @@ export class CheckoutComponent implements OnInit {
       next: (res) => {
         this.isProcessing = false;
         this.isAddressModalOpen = false;
-        this.loadAddresses(); 
+        this.loadAddresses();
         alert('Alamat berhasil ditambahkan!');
       },
       error: (err) => {

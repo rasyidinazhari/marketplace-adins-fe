@@ -162,7 +162,7 @@ export class BuyerOrderDetailComponent implements OnInit {
     this.isUpdating = true;
     this.actionError = '';
 
-    this.orderSvc.updateOrderStatus(this.orderId, { status: 'Completed' }).subscribe({
+    this.orderSvc.updateOrderStatus(this.orderId, { status: 'DELIVERED' }).subscribe({
       next: () => {
         this.isUpdating = false;
         this.loadOrder(false);
@@ -262,7 +262,6 @@ export class BuyerOrderDetailComponent implements OnInit {
       }));
     }
 
-    // Ambil langsung field dari API (termasuk totalBeforeDisc & totalAfterDisc)
     const rawBeforeDisc = this.firstNumber(
       this.pick(raw, 'totalBeforeDisc', 'totalBeforeDiscount', 'subtotal', 'totalPrice', 'totalAmount')
     );
@@ -292,7 +291,6 @@ export class BuyerOrderDetailComponent implements OnInit {
       ? rawDiscount
       : (subtotal > total ? subtotal - total : 0);
 
-    // Jika item ada tapi harga per item belum terbaca dari API, hitung dari subtotal
     if (items.length > 0 && itemsTotal === 0 && subtotal > 0) {
       const totalQty = items.reduce((acc, i) => acc + (i.qty || 1), 0);
       if (items.length === 1 && totalQty > 0) {
@@ -308,7 +306,7 @@ export class BuyerOrderDetailComponent implements OnInit {
       date: this.formatDate(this.pick(raw, 'createdAt', 'orderDate') as string),
       status: this.statusLabel(status),
       statusTone: this.statusTone(status),
-      canComplete: !this.isCancelled(status) && level === 3,
+      canComplete: level === 2, // Aktif saat ON_DELIVERY
       courier: '-',
       trackingNumber: '-',
       store: (this.pick(raw, 'storeName', 'store') as string) ?? '-',
@@ -332,73 +330,65 @@ export class BuyerOrderDetailComponent implements OnInit {
     };
   }
 
-  private normalize(status?: string | number): string {
+  private normalizeStatus(status?: string | number): string {
     if (typeof status === 'number') {
       const map: Record<number, string> = {
-        0: 'PENDING',
-        1: 'PAID',
-        2: 'PROCESSING',
-        3: 'SHIPPED',
-        4: 'COMPLETED',
-        5: 'CANCELLED'
+        0: 'PENDING_PAYMENT',
+        1: 'ON_PROCESS',
+        2: 'ON_DELIVERY',
+        3: 'DELIVERED'
       };
-      return map[status] ?? String(status);
+      return map[status] ?? 'PENDING_PAYMENT';
     }
-    return (status || '').trim().toUpperCase();
-  }
-
-  private isCancelled(status?: string | number): boolean {
-    const s = this.normalize(status);
-    return s === 'CANCELLED' || s === 'CANCELED';
+    return (status || 'PENDING_PAYMENT').trim().toUpperCase();
   }
 
   private statusLevel(status?: string | number): number {
-    switch (this.normalize(status)) {
-      case 'PAID':
+    switch (this.normalizeStatus(status)) {
+      case 'ON_PROCESS':
         return 1;
-      case 'PROCESSING':
-      case 'PROCESSED':
+      case 'ON_DELIVERY':
         return 2;
-      case 'SHIPPED':
+      case 'DELIVERED':
         return 3;
-      case 'COMPLETED':
-        return 4;
+      case 'PENDING_PAYMENT':
       default:
         return 0;
     }
   }
 
   private statusLabel(status?: string | number): string {
-    if (this.isCancelled(status)) return 'Dibatalkan';
     switch (this.statusLevel(status)) {
-      case 1: return 'Sudah Dibayar';
-      case 2: return 'Sedang Diproses';
-      case 3: return 'Sedang Dikirim';
-      case 4: return 'Selesai';
-      default: return 'Menunggu Pembayaran';
+      case 1:
+        return 'Sedang Diproses';
+      case 2:
+        return 'Sedang Dikirim';
+      case 3:
+        return 'Selesai';
+      case 0:
+      default:
+        return 'Menunggu Pembayaran';
     }
   }
 
   private statusTone(status?: string | number): 'pending' | 'active' | 'done' | 'cancelled' {
-    if (this.isCancelled(status)) return 'cancelled';
     const level = this.statusLevel(status);
-    if (level === 4) return 'done';
+    if (level === 3) return 'done';
     if (level === 0) return 'pending';
     return 'active';
   }
 
   private buildTimeline(raw: any): TimelineStep[] {
     const status = this.pick(raw, 'orderStatus', 'status') as string | number | undefined;
-    const current = this.isCancelled(status) ? 0 : this.statusLevel(status);
+    const current = this.statusLevel(status);
     const createdAt = this.pick(raw, 'createdAt', 'orderDate') as string;
     const updatedAt = this.pick(raw, 'updatedAt') as string;
 
     const steps = [
-      { title: 'Pesanan Dibuat', time: this.formatDate(createdAt) },
-      { title: 'Pembayaran Terverifikasi', time: '' },
-      { title: 'Pesanan Diproses Penjual', time: '' },
+      { title: 'Menunggu Pembayaran', time: this.formatDate(createdAt) },
+      { title: 'Pesanan Diproses', time: '' },
       { title: 'Paket Sedang Dikirim', time: '' },
-      { title: 'Pesanan Selesai', time: '' }
+      { title: 'Pesanan Diterima (Selesai)', time: '' }
     ];
 
     return steps.map((s, idx) => ({

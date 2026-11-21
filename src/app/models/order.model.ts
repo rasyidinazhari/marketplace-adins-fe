@@ -7,7 +7,7 @@ export interface OrderPayload {
 
 // Payload untuk mengubah status pesanan (PATCH)
 export interface UpdateOrderStatusPayload {
-    status: string; // Contoh: "Paid", "Shipped", "Completed"
+    status: string;
 }
 
 // Response dari API
