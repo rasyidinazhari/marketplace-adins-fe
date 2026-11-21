@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { authGuard, loggedOutGuard } from './guards/auth.guard';
 
 // Public Pages
 import { LandingComponent } from './pages/public/landing/landing.component';
@@ -48,11 +49,13 @@ export const routes: Routes = [
   // Auth / Role Logins
   {
     path: 'buyer/login',
+    canActivate: [loggedOutGuard],
     component: BuyerLoginComponent,
     title: 'Masuk Akun Pembeli - WarungAdins'
   },
   {
     path: 'seller/login',
+    canActivate: [loggedOutGuard],
     component: SellerLoginComponent,
     title: 'Portal Mitra Penjual - WarungAdins'
   },
@@ -63,6 +66,7 @@ export const routes: Routes = [
   },
   {
     path: 'register',
+    canActivate: [loggedOutGuard],
     component: RegisterComponent,
     title: 'Daftar Akun Baru - WarungAdins'
   },
@@ -70,21 +74,25 @@ export const routes: Routes = [
   // Buyer
   {
     path: 'cart',
+    canActivate: [authGuard('Buyer')],
     component: CartComponent,
     title: 'Keranjang Belanja - WarungAdins'
   },
   {
     path: 'checkout',
+    canActivate: [authGuard('Buyer')],
     component: CheckoutComponent,
     title: 'Checkout & Pembayaran - WarungAdins'
   },
   {
     path: 'buyer/orders',
+    canActivate: [authGuard('Buyer')],
     component: BuyerOrderListComponent,
     title: 'Pesanan Saya - WarungAdins'
   },
   {
     path: 'buyer/orders/:id',
+    canActivate: [authGuard('Buyer')],
     component: BuyerOrderDetailComponent,
     title: 'Detail Pesanan - WarungAdins'
   },
@@ -92,6 +100,8 @@ export const routes: Routes = [
   // Seller (Nested Routing)
   {
     path: 'seller',
+    canActivate: [authGuard('Seller')],
+    canActivateChild: [authGuard('Seller')],
     component: SellerLayoutComponent,
     children: [
       {

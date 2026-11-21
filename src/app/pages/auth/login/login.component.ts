@@ -43,8 +43,9 @@ export class LoginComponent {
         role: 'Buyer'
       })
       .subscribe((response: any) => {
-        console.log(response);
-        this.authSvc.setToken(response.token); // Handle successful login
+        this.authSvc.setToken(response.token);
+        this.authSvc.setUser(response.user);
+        this.router.navigate(['/']);
       });
   }
 }

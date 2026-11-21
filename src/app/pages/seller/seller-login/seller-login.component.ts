@@ -2,8 +2,8 @@ import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink, Router } from '@angular/router';
 import { FormBuilder, Validators, ReactiveFormsModule, FormsModule } from '@angular/forms';
-import { LoginService } from '../../../services/login/login.service';
 import { AuthService } from '../../../services/auth/auth.service';
+import { LoginService } from '../../../services/login/login.service';
 
 @Component({
   selector: 'app-seller-login',
@@ -54,30 +54,20 @@ export class SellerLoginComponent {
     this.loginSvc.submitLogin(payload).subscribe({
       next: (response: any) => {
         this.isLoading = false;
-        if (response && response.token) {
-          this.authSvc.setToken(response.token);
+        if (!response?.token || response.user?.role !== payload.role) {
+          this.errorMessage = 'Respons login tidak valid.';
+          return;
         }
-        if (response && response.user) {
-          this.authSvc.setUser(response.user);
-        }
+        this.authSvc.setToken(response.token);
+        this.authSvc.setUser(response.user);
         this.router.navigate(['/seller/products']);
       },
-      error: (err: any) => {
-        // Fallback for mock/demo mode when backend API is offline
-        console.warn('API error or offline mode, simulating demo login:', err);
-        setTimeout(() => {
-          this.isLoading = false;
-          this.authSvc.setToken('dummy_seller_jwt_token_warungadins');
-          this.authSvc.setUser({
-            id: 1,
-            name: 'Mitra Adins',
-            email: 'seller@adins.co.id',
-            role: 'Seller',
-            stores: [{ id: 1, storeName: 'Adins Official Store' }]
-          });
-          this.router.navigate(['/seller/products']);
-        }, 600);
-      }
+      error: (err) => {
+        this.isLoading = false;
+        this.errorMessage = err.status === 0
+          ? 'Tidak dapat terhubung ke server. Coba lagi.'
+          : err.error?.message || 'Gagal masuk. Periksa akun Anda dan coba lagi.';
+      },
     });
   }
 }
