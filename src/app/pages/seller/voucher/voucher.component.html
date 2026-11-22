@@ -35,18 +35,18 @@
       <p role="status" class="text-xs text-zinc-600">Akun ini belum memiliki toko.</p>
     } @else {
       <label for="voucher-store" class="text-sm font-medium text-zinc-800">Toko</label>
-      <select
-        id="voucher-store"
-        [ngModel]="selectedStoreId"
-        (ngModelChange)="selectStore($event)"
-        [disabled]="isSaving || isCreateModalOpen"
-        class="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-800 disabled:opacity-50 sm:max-w-xs"
-      >
-        <option [ngValue]="null" disabled>Pilih toko</option>
-        @for (store of stores; track store.id) {
-          <option [ngValue]="store.id">{{ store.storeName }}</option>
-        }
-      </select>
+      <fieldset [disabled]="isSaving || isCreateModalOpen" class="min-w-0 w-full sm:max-w-xs">
+        <select
+          id="voucher-store"
+          [formControl]="storeControl"
+          class="w-full rounded-md border border-zinc-200 bg-white px-3 py-2 text-xs text-zinc-800 disabled:opacity-50"
+        >
+          <option [ngValue]="null" disabled>Pilih toko</option>
+          @for (store of stores; track store.id) {
+            <option [ngValue]="store.id">{{ store.storeName }}</option>
+          }
+        </select>
+      </fieldset>
     }
   </div>
 

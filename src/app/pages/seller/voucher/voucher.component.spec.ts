@@ -106,8 +106,13 @@ describe('VoucherComponent', () => {
 
   it('validates the form and keeps the draft after a duplicate-code conflict', () => {
     loadSingleStore([]);
+    const store = view.querySelector<HTMLSelectElement>('#voucher-store')!;
+    expect(store.selectedOptions[0].textContent).toContain(firstStore.storeName);
+    expect(store.matches(':disabled')).toBeFalse();
+
     findButton('+ Buat Voucher Baru').click();
     fixture.detectChanges();
+    expect(store.matches(':disabled')).toBeTrue();
     enterValue('voucher-code', '  PromoBaru  ');
     enterValue('voucher-percentage', '10.5');
     enterValue('voucher-max-discount', '25000');
@@ -134,6 +139,7 @@ describe('VoucherComponent', () => {
 
     expect(view.querySelector('[role="dialog"]')).toBeNull();
     expect(view.querySelector('tbody')?.textContent).toContain(voucher.code);
+    expect(store.matches(':disabled')).toBeFalse();
   });
 
   it('applies the saved status and removes a row only after a successful delete', () => {
@@ -144,10 +150,14 @@ describe('VoucherComponent', () => {
 
     findButton('Nonaktifkan').click();
     const update = http.expectOne({ method: 'PATCH', url: voucherUrl });
+    fixture.detectChanges();
+    const store = view.querySelector<HTMLSelectElement>('#voucher-store')!;
+    expect(store.matches(':disabled')).toBeTrue();
     expect(update.request.body).toEqual({ isActive: false });
     expect(view.querySelector('tbody')?.textContent).toContain('Aktif');
     update.flush({ ...voucher, isActive: false });
     fixture.detectChanges();
+    expect(store.matches(':disabled')).toBeFalse();
     expect(view.querySelector('tbody')?.textContent).toContain('Nonaktif');
     expect(view.textContent).toContain('1 voucher · 0 aktif');
 

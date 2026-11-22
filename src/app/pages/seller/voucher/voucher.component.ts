@@ -2,7 +2,7 @@ import { DecimalPipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, DestroyRef, OnInit, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { FormBuilder, FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { Subject, catchError, of, switchMap } from 'rxjs';
 import { ModalComponent } from '../../../components/ui/modal/modal.component';
 import { StoreSummary } from '../../../models/product.model';
@@ -13,7 +13,7 @@ import { VoucherService } from '../../../services/voucher/voucher.service';
 @Component({
   selector: 'app-voucher',
   standalone: true,
-  imports: [DecimalPipe, FormsModule, ReactiveFormsModule, ModalComponent],
+  imports: [DecimalPipe, ReactiveFormsModule, ModalComponent],
   templateUrl: './voucher.component.html',
   styleUrl: './voucher.component.css',
 })
@@ -25,6 +25,7 @@ export class VoucherComponent implements OnInit {
   private readonly voucherRequests = new Subject<number | null>();
 
   readonly maxVoucherAmount = 2147483647;
+  readonly storeControl = this.formBuilder.control<number | null>(null);
   readonly voucherForm = this.formBuilder.group({
     code: this.formBuilder.nonNullable.control(''),
     discountPercentage: this.formBuilder.control<number | null>(null),
@@ -34,7 +35,6 @@ export class VoucherComponent implements OnInit {
 
   stores: StoreSummary[] = [];
   vouchers: SellerVoucher[] = [];
-  selectedStoreId: number | null = null;
   isLoadingStores = false;
   isLoadingVouchers = false;
   storeLoadFailed = false;
@@ -43,6 +43,10 @@ export class VoucherComponent implements OnInit {
   isSaving = false;
   createError = '';
   actionError = '';
+
+  get selectedStoreId(): number | null {
+    return this.storeControl.value;
+  }
 
   ngOnInit(): void {
     this.voucherRequests.pipe(
@@ -59,6 +63,10 @@ export class VoucherComponent implements OnInit {
       this.vouchers = hasValidResponse ? vouchers : [];
     });
 
+    this.storeControl.valueChanges.pipe(
+      takeUntilDestroyed(this.destroyRef),
+    ).subscribe(() => this.loadVouchers());
+
     this.loadStores();
   }
 
@@ -71,20 +79,13 @@ export class VoucherComponent implements OnInit {
       next: stores => {
         this.stores = stores;
         this.isLoadingStores = false;
-        this.selectStore(stores.length === 1 ? stores[0].id : null);
+        this.storeControl.setValue(stores.length === 1 ? stores[0].id : null);
       },
       error: () => {
         this.isLoadingStores = false;
         this.storeLoadFailed = true;
       },
     });
-  }
-
-  selectStore(storeId: number | null): void {
-    if (this.isSaving || this.isCreateModalOpen) return;
-
-    this.selectedStoreId = storeId;
-    this.loadVouchers();
   }
 
   loadVouchers(): void {
