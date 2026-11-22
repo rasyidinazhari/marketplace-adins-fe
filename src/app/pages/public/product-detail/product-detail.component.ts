@@ -4,7 +4,11 @@ import { RouterLink, Router, ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { TopNavbarComponent } from '../../../layout/top-navbar/top-navbar.component';
 import { CompactFooterComponent } from '../../../layout/compact-footer/compact-footer.component';
+import { ModalComponent } from '../../../components/ui/modal/modal.component';
 import { ProductService } from '../../../services/product/product.service';
+import { ReviewService } from '../../../services/review/review.service';
+import { AuthService } from '../../../services/auth/auth.service';
+import { ProductReview, ReviewStats } from '../../../models/review.model';
 
 export interface ProductDetailData {
   id: number;
@@ -48,7 +52,7 @@ export interface ProductDetailData {
 @Component({
   selector: 'app-public-product-detail',
   standalone: true,
-  imports: [CommonModule, RouterLink, FormsModule, TopNavbarComponent, CompactFooterComponent],
+  imports: [CommonModule, RouterLink, FormsModule, TopNavbarComponent, CompactFooterComponent, ModalComponent],
   templateUrl: './product-detail.component.html',
   styleUrl: './product-detail.component.css'
 })
@@ -56,6 +60,8 @@ export class PublicProductDetailComponent implements OnInit {
   private router = inject(Router);
   private route = inject(ActivatedRoute);
   private productSvc = inject(ProductService);
+  private reviewSvc = inject(ReviewService);
+  private authSvc = inject(AuthService);
 
   selectedImageIndex = 0;
   selectedColor = 'Midnight Black';
@@ -63,6 +69,24 @@ export class PublicProductDetailComponent implements OnInit {
   activeTab: 'deskripsi' | 'spesifikasi' | 'ulasan' = 'deskripsi';
   isWishlisted = false;
   addedToCartFeedback = false;
+
+  // Review state
+  reviews: ProductReview[] = [];
+  isLoadingReviews = false;
+  reviewStats: ReviewStats = {
+    averageRating: 0,
+    totalReviews: 0,
+    ratingBreakdown: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+  };
+
+  // Review modal form state
+  isReviewModalOpen = false;
+  isSubmittingReview = false;
+  reviewRating = 5;
+  hoveredRating = 0;
+  reviewComment = '';
+  reviewError = '';
+  reviewSuccessMessage = '';
 
   product: ProductDetailData = {
     id: 1,
@@ -188,7 +212,9 @@ export class PublicProductDetailComponent implements OnInit {
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
     if (id) {
-      this.loadProduct(Number(id));
+      const numId = Number(id);
+      this.loadProduct(numId);
+      this.loadReviews(numId);
     }
   }
 
@@ -242,5 +268,88 @@ export class PublicProductDetailComponent implements OnInit {
 
   buyNow(): void {
     this.router.navigate(['/checkout']);
+  }
+
+  loadReviews(productId: number): void {
+    this.isLoadingReviews = true;
+    this.reviewSvc.getReviewsByProductId(productId).subscribe({
+      next: (data) => {
+        this.reviews = data;
+        this.reviewStats = this.reviewSvc.calculateStats(data);
+        if (data.length > 0) {
+          this.product.rating = this.reviewStats.averageRating;
+          this.product.ratingCount = this.reviewStats.totalReviews;
+        }
+        this.isLoadingReviews = false;
+      },
+      error: (err) => {
+        console.warn('Gagal memuat ulasan produk:', err);
+        this.isLoadingReviews = false;
+      },
+    });
+  }
+
+  openReviewModal(): void {
+    const token = this.authSvc.getToken();
+    if (!token) {
+      this.router.navigate(['/buyer/login'], {
+        queryParams: { returnUrl: this.router.url },
+      });
+      return;
+    }
+
+    this.reviewRating = 5;
+    this.hoveredRating = 0;
+    this.reviewComment = '';
+    this.reviewError = '';
+    this.reviewSuccessMessage = '';
+    this.isReviewModalOpen = true;
+  }
+
+  closeReviewModal(): void {
+    this.isReviewModalOpen = false;
+    this.reviewError = '';
+  }
+
+  setRating(rating: number): void {
+    this.reviewRating = rating;
+  }
+
+  submitReview(): void {
+    if (this.reviewRating < 1 || this.reviewRating > 5) {
+      this.reviewError = 'Pilih rating bintang antara 1 sampai 5.';
+      return;
+    }
+
+    if (!this.reviewComment.trim()) {
+      this.reviewError = 'Mohon tulis komentar ulasan Anda.';
+      return;
+    }
+
+    this.isSubmittingReview = true;
+    this.reviewError = '';
+    this.reviewSuccessMessage = '';
+
+    this.reviewSvc
+      .createReview(this.product.id, {
+        rating: this.reviewRating,
+        comment: this.reviewComment.trim(),
+      })
+      .subscribe({
+        next: () => {
+          this.isSubmittingReview = false;
+          this.reviewSuccessMessage = 'Ulasan Anda berhasil dikirim!';
+          this.loadReviews(this.product.id);
+          setTimeout(() => {
+            this.closeReviewModal();
+            this.reviewSuccessMessage = '';
+          }, 1500);
+        },
+        error: (err) => {
+          this.isSubmittingReview = false;
+          this.reviewError =
+            err.error?.message || 'Gagal mengirim ulasan. Silakan periksa koneksi Anda dan coba lagi.';
+        },
+      });
   }
 }

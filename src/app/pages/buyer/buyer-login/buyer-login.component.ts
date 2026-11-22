@@ -1,6 +1,6 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink, Router } from '@angular/router';
+import { RouterLink, Router, ActivatedRoute } from '@angular/router';
 import {
   FormBuilder,
   Validators,
@@ -19,6 +19,7 @@ import { AuthService } from '../../../services/auth/auth.service';
 })
 export class BuyerLoginComponent {
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
   private fb = inject(FormBuilder);
   private loginSvc = inject(LoginService);
   private authSvc = inject(AuthService);
@@ -57,13 +58,16 @@ export class BuyerLoginComponent {
         }
         this.authSvc.setToken(response.token);
         this.authSvc.setUser(response.user);
-        this.router.navigate(['/']);
+        const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl') || '/';
+        this.router.navigateByUrl(returnUrl);
       },
       error: (err) => {
         this.isLoading = false;
-        this.errorMessage = err.status === 0
-          ? 'Tidak dapat terhubung ke server. Coba lagi.'
-          : err.error?.message || 'Gagal masuk. Periksa akun Anda dan coba lagi.';
+        this.errorMessage =
+          err.status === 0
+            ? 'Sistem sedang down. Coba lagi.'
+            : err.error?.message ||
+              'Gagal masuk. Periksa akun Anda dan coba lagi.';
       },
     });
   }
