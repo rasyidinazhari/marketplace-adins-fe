@@ -1,6 +1,7 @@
-import { Component } from '@angular/core';
+import { Component, ElementRef, HostListener, ViewChild, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink, RouterLinkActive } from '@angular/router';
+import { Router, RouterLink, RouterLinkActive } from '@angular/router';
+import { AuthService, UserRole } from '../../services/auth/auth.service';
 
 @Component({
   selector: 'app-top-navbar',
@@ -10,11 +11,42 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
   styleUrl: './top-navbar.component.css'
 })
 export class TopNavbarComponent {
+  private readonly authService = inject(AuthService);
+  private readonly router = inject(Router);
+
+  @ViewChild('accountMenu') private accountMenu?: ElementRef<HTMLElement>;
+
   isMobileMenuOpen = false;
-  isSellerMenuOpen = false;
-  isUserMenuOpen = false;
+  isAccountMenuOpen = false;
+
+  get role(): UserRole | 'Guest' {
+    return this.authService.getCurrentRole() ?? 'Guest';
+  }
+
+  get accountName(): string {
+    return this.authService.getUser()?.name?.trim() || 'Akun';
+  }
 
   toggleMobileMenu(): void {
+    this.isAccountMenuOpen = false;
     this.isMobileMenuOpen = !this.isMobileMenuOpen;
+  }
+
+  toggleAccountMenu(): void {
+    this.isMobileMenuOpen = false;
+    this.isAccountMenuOpen = !this.isAccountMenuOpen;
+  }
+
+  @HostListener('document:click', ['$event.target'])
+  closeAccountMenuOnOutsideClick(target: Node | null): void {
+    if (this.isAccountMenuOpen && !this.accountMenu?.nativeElement.contains(target)) {
+      this.isAccountMenuOpen = false;
+    }
+  }
+
+  logout(): void {
+    this.isAccountMenuOpen = false;
+    this.authService.clearToken();
+    void this.router.navigateByUrl('/', { replaceUrl: true });
   }
 }

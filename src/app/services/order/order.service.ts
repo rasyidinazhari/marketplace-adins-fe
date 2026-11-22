@@ -2,10 +2,11 @@ import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { 
-  OrderPayload, 
-  OrderResponse, 
-  UpdateOrderStatusPayload 
+import {
+  OrderDetailResponse,
+  OrderPayload,
+  OrderResponse,
+  UpdateOrderStatusPayload
 } from '../../models/order.model';
 
 @Injectable({
@@ -21,8 +22,8 @@ export class OrderService {
    * 1. POST: Membuat Pesanan Baru
    * Endpoint: POST /api/orders
    */
-  createOrder(payload: OrderPayload): Observable<OrderResponse> {
-    return this.http.post<OrderResponse>(this.apiOrderUrl, payload);
+  createOrder(payload: OrderPayload): Observable<OrderDetailResponse> {
+    return this.http.post<OrderDetailResponse>(this.apiOrderUrl, payload);
   }
 
   /**
@@ -37,8 +38,8 @@ export class OrderService {
    * 3. GET: Mengambil Detail Pesanan Berdasarkan ID
    * Endpoint: GET /api/orders/{orderId}
    */
-  getOrderById(orderId: number): Observable<OrderResponse> {
-    return this.http.get<OrderResponse>(`${this.apiOrderUrl}/${orderId}`);
+  getOrderById(orderId: number): Observable<OrderDetailResponse> {
+    return this.http.get<OrderDetailResponse>(`${this.apiOrderUrl}/${orderId}`);
   }
 
   /**

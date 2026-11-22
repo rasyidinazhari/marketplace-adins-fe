@@ -51,27 +51,19 @@ export class BuyerLoginComponent {
     this.loginSvc.submitLogin(payload).subscribe({
       next: (response: any) => {
         this.isLoading = false;
-        if (response && response.token) {
-          this.authSvc.setToken(response.token);
+        if (!response?.token || response.user?.role !== payload.role) {
+          this.errorMessage = 'Respons login tidak valid.';
+          return;
         }
-        if (response && response.user) {
-          this.authSvc.setUser(response.user);
-        }
+        this.authSvc.setToken(response.token);
+        this.authSvc.setUser(response.user);
         this.router.navigate(['/']);
       },
-      error: (err: any) => {
-        console.warn('API error or offline mode, simulating demo login:', err);
-        setTimeout(() => {
-          this.isLoading = false;
-          this.authSvc.setToken('dummy_buyer_jwt_token_warungadins');
-          this.authSvc.setUser({
-            id: 2,
-            name: 'Pembeli Setia',
-            email: payload.email || 'buyer@adins.co.id',
-            role: 'Buyer'
-          });
-          this.router.navigate(['/']);
-        }, 600);
+      error: (err) => {
+        this.isLoading = false;
+        this.errorMessage = err.status === 0
+          ? 'Tidak dapat terhubung ke server. Coba lagi.'
+          : err.error?.message || 'Gagal masuk. Periksa akun Anda dan coba lagi.';
       },
     });
   }

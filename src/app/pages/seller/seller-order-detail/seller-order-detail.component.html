@@ -1,138 +1,138 @@
-<div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
-  
-  <nav class="flex items-center gap-2 text-xs text-zinc-500 mb-6">
-    <a [routerLink]="'/seller/orders'" class="hover:text-zinc-900 transition-colors">Pesanan Toko</a>
-    <span>/</span>
-    <span class="text-zinc-900 font-medium">Detail Pesanan Masuk</span>
+<div class="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
+  <nav aria-label="Navigasi pesanan" class="mb-5 flex items-center gap-2 text-xs text-zinc-600">
+    <a routerLink="/seller/orders" class="hover:text-zinc-900 hover:underline">Pesanan Masuk</a>
+    <span aria-hidden="true">/</span>
+    <span aria-current="page">Detail Pesanan</span>
   </nav>
 
-  <!-- Header Card (Shadcn style) -->
-  <div class="rounded-xl border border-zinc-200/80 bg-white p-6 shadow-2xs mb-6 space-y-4">
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-zinc-100">
-      <div>
-        <div class="text-xs text-zinc-500">Nomor Pesanan Pelanggan</div>
-        <h1 class="text-lg font-bold text-zinc-950 mt-0.5">{{ order.orderNumber }}</h1>
-        <div class="text-xs text-zinc-400 mt-0.5">Waktu Masuk: {{ order.date }}</div>
-      </div>
-      <div class="flex items-center gap-3">
-        <span class="rounded-full px-3 py-1 text-xs font-semibold border"
-              [class.bg-blue-50]="order.status === 'Perlu Dikirim'"
-              [class.text-blue-700]="order.status === 'Perlu Dikirim'"
-              [class.border-blue-200]="order.status === 'Perlu Dikirim'"
-              [class.bg-purple-50]="order.status === 'Dalam Pengiriman'"
-              [class.text-purple-700]="order.status === 'Dalam Pengiriman'"
-              [class.border-purple-200]="order.status === 'Dalam Pengiriman'">
-          {{ order.status }}
-        </span>
-        <button class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-md border border-zinc-200 bg-white text-xs font-semibold text-zinc-700 hover:bg-zinc-50 shadow-2xs transition-colors">
-          <svg class="w-3.5 h-3.5 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
-          <span>Cetak Label Resi</span>
-        </button>
-      </div>
-    </div>
-
-    <!-- Fulfillment Action Form -->
-    @if (!isShipped) {
-      <div class="p-4 rounded-lg bg-zinc-50 border border-zinc-200/80 space-y-3">
-        <div class="text-xs font-semibold text-zinc-900">Proses Pengiriman Paket:</div>
-        <div class="flex flex-col sm:flex-row items-center gap-3">
-          <input type="text" 
-                 [(ngModel)]="trackingNumberInput" 
-                 placeholder="Ketik atau scan nomor resi kurir (contoh: JNE881923019230)..." 
-                 class="w-full sm:flex-1 h-9 px-3 text-xs rounded-md border border-zinc-200 bg-white focus:outline-none focus:ring-1 focus:ring-zinc-950 font-mono" />
-          <button (click)="submitTracking()" 
-                  [disabled]="!trackingNumberInput.trim()"
-                  class="w-full sm:w-auto px-4 py-2 rounded-md bg-zinc-900 text-xs font-semibold text-white hover:bg-zinc-800 disabled:opacity-40 transition-colors shadow-2xs">
-            Kirim Barang Sekarang
-          </button>
-        </div>
-      </div>
-    } @else {
-      <div class="p-4 rounded-lg bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 flex items-center gap-2">
-        <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-        <span>Resi berhasil diinput. Paket sekarang berstatus <strong>Dalam Pengiriman</strong>.</span>
-      </div>
-    }
-  </div>
-
-  <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-    
-    <!-- Informasi Pembeli & Alamat -->
-    <div class="rounded-xl border border-zinc-200/80 bg-white p-5 shadow-2xs space-y-3">
-      <div class="text-xs font-semibold text-zinc-900 uppercase tracking-wider">Tujuan Pengiriman</div>
-      <div class="space-y-1.5 text-xs">
-        <div class="font-semibold text-zinc-900">{{ order.buyer.name }}</div>
-        <div class="text-zinc-500">{{ order.buyer.phone }} • {{ order.buyer.email }}</div>
-        <div class="text-zinc-600 leading-relaxed pt-1 border-t border-zinc-100">
-          {{ order.shippingAddress.address }}, {{ order.shippingAddress.city }} - {{ order.shippingAddress.postalCode }}
-        </div>
-      </div>
-    </div>
-
-    <!-- Informasi Logistik Kurir -->
-    <div class="rounded-xl border border-zinc-200/80 bg-white p-5 shadow-2xs space-y-3">
-      <div class="text-xs font-semibold text-zinc-900 uppercase tracking-wider">Metode Pengiriman</div>
-      <div class="space-y-2 text-xs">
+  @if (order; as detail) {
+    <div class="mb-6 rounded-xl border border-zinc-200 bg-white p-5 sm:p-6">
+      <div class="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <span class="text-zinc-500">Layanan Kurir:</span>
-          <div class="font-semibold text-zinc-900 mt-0.5">{{ order.courier }}</div>
+          <h1 class="text-xl font-bold tracking-tight text-zinc-950">ORD-{{ detail.id }}</h1>
+          <p class="mt-1 text-sm text-zinc-600">Pembeli {{ detail.userName || '—' }}</p>
+          @if (detail.createdAt) {
+            <p class="mt-1 text-xs text-zinc-500">
+              {{ detail.createdAt | date: 'dd MMM yyyy, HH:mm': '+0700' }} WIB
+            </p>
+          }
         </div>
-        <div>
-          <span class="text-zinc-500">Biaya Ongkir (Dibayar Pembeli):</span>
-          <div class="font-semibold text-zinc-900 mt-0.5">Rp {{ order.shippingCost | number:'1.0-0' }}</div>
+        <div class="flex flex-wrap items-center gap-3">
+          @if (getOrderStatus(detail.orderStatus); as status) {
+            <span class="rounded-full border px-3 py-1 text-xs font-semibold" [ngClass]="status.className">
+              {{ status.label }}
+            </span>
+          } @else {
+            <span class="text-xs text-zinc-600">Status tidak diketahui</span>
+          }
+          @if (canShip) {
+            <button
+              type="button"
+              (click)="markAsShipped()"
+              [disabled]="isUpdating || needsReload"
+              class="rounded-md bg-zinc-900 px-4 py-2 text-xs font-semibold text-white hover:bg-zinc-800 disabled:opacity-50"
+            >
+              {{ isUpdating ? 'Menyimpan...' : 'Tandai Sudah Dikirim' }}
+            </button>
+          }
         </div>
       </div>
-    </div>
 
-  </div>
-
-  <!-- Produk & Pendapatan Bersih Penjual -->
-  <div class="rounded-xl border border-zinc-200/80 bg-white p-6 shadow-2xs space-y-6">
-    <div class="text-xs font-semibold text-zinc-900 uppercase tracking-wider pb-3 border-b border-zinc-100">
-      Barang yang Harus Disiapkan
-    </div>
-
-    <div class="space-y-4">
-      @for (item of order.items; track item.sku) {
-        <div class="flex items-center justify-between gap-4">
-          <div class="flex items-center gap-3">
-            <img [src]="item.image" [alt]="item.name" class="w-14 h-14 rounded-lg object-cover bg-zinc-100 border border-zinc-200/60" />
-            <div>
-              <div class="text-sm font-semibold text-zinc-900">{{ item.name }}</div>
-              <div class="text-xs text-zinc-500 font-mono">SKU: {{ item.sku }}</div>
-              <div class="text-xs text-zinc-500 mt-0.5">Jumlah: <strong>{{ item.qty }} unit</strong> x Rp {{ item.price | number:'1.0-0' }}</div>
-            </div>
-          </div>
-          <div class="text-sm font-bold text-zinc-950">
-            Rp {{ (item.price * item.qty) | number:'1.0-0' }}
-          </div>
+      @if (updateError) {
+        <div class="mt-4 rounded-md bg-red-50 p-3">
+          <p role="alert" class="text-sm text-red-700">{{ updateError }}</p>
+          @if (needsReload) {
+            <button type="button" (click)="loadOrder()" class="mt-2 text-sm font-medium text-red-700 underline">
+              Muat ulang pesanan
+            </button>
+          }
         </div>
       }
     </div>
 
-    <!-- Rincian Pendapatan Toko -->
-    <div class="pt-4 border-t border-zinc-100 space-y-2 text-xs text-zinc-600 max-w-sm ml-auto">
-      <div class="flex justify-between">
-        <span>Total Penjualan Produk</span>
-        <span class="font-medium text-zinc-900">Rp {{ order.productTotal | number:'1.0-0' }}</span>
-      </div>
-      <div class="flex justify-between text-zinc-500">
-        <span>Biaya Administrasi Marketplace (3%)</span>
-        <span class="font-medium text-red-600">- Rp {{ order.marketplaceFee | number:'1.0-0' }}</span>
-      </div>
-      <div class="flex justify-between pt-2 border-t border-zinc-200 text-sm font-bold text-emerald-600">
-        <span>Pendapatan Bersih Penjual</span>
-        <span>Rp {{ order.sellerIncome | number:'1.0-0' }}</span>
-      </div>
+    <div class="mb-6 grid gap-6 md:grid-cols-2">
+      <section class="rounded-xl border border-zinc-200 bg-white p-5">
+        <h2 class="mb-3 text-sm font-semibold text-zinc-950">Tujuan Pengiriman</h2>
+        <div class="space-y-1 text-sm text-zinc-600">
+          <p class="font-medium text-zinc-900">{{ detail.recipientName || '—' }}</p>
+          @if (detail.phoneNumber) {
+            <p>{{ detail.phoneNumber }}</p>
+          }
+          @if (detail.fullAddress) {
+            <p class="whitespace-pre-line break-words">{{ detail.fullAddress }}</p>
+          } @else {
+            <p>Alamat lengkap belum tersedia.</p>
+          }
+          @if (detail.city || detail.postalCode) {
+            <p>{{ detail.city }} {{ detail.postalCode }}</p>
+          }
+        </div>
+      </section>
+
+      <section class="rounded-xl border border-zinc-200 bg-white p-5">
+        <h2 class="mb-3 text-sm font-semibold text-zinc-950">Rincian Transaksi</h2>
+        <dl class="space-y-2 text-sm text-zinc-600">
+          <div class="flex flex-wrap justify-between gap-2">
+            <dt>Subtotal barang</dt>
+            <dd>Rp {{ detail.totalBeforeDisc | number: '1.0-2' }}</dd>
+          </div>
+          @if (detail.discountAmount || detail.voucherCode) {
+            <div class="flex flex-wrap justify-between gap-2">
+              <dt>Diskon @if (detail.voucherCode) { ({{ detail.voucherCode }}) }</dt>
+              <dd>− Rp {{ (detail.discountAmount ?? 0) | number: '1.0-2' }}</dd>
+            </div>
+          }
+          <div class="flex flex-wrap justify-between gap-2 border-t border-zinc-200 pt-2 font-semibold text-zinc-950">
+            <dt>Total Pesanan</dt>
+            <dd>Rp {{ (detail.totalAfterDisc ?? detail.totalBeforeDisc) | number: '1.0-2' }}</dd>
+          </div>
+        </dl>
+      </section>
     </div>
 
-    <div class="flex items-center justify-between pt-4 border-t border-zinc-100">
-      <a [routerLink]="['/seller/orders']" class="px-4 py-2 rounded-md border border-zinc-200 bg-white text-xs font-semibold text-zinc-700 hover:bg-zinc-50 shadow-2xs transition-colors">
-        Kembali ke Pesanan Masuk
-      </a>
+    <section class="overflow-hidden rounded-xl border border-zinc-200 bg-white">
+      <h2 class="p-5 text-sm font-semibold text-zinc-950">Barang yang Dipesan</h2>
+      @if (detail.items.length === 0) {
+        <p class="px-5 pb-5 text-sm text-zinc-600">Belum ada barang dalam pesanan ini.</p>
+      } @else {
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs">
+            <thead class="border-y border-zinc-200 bg-zinc-50 font-semibold text-zinc-600">
+              <tr>
+                <th scope="col" class="p-4">Produk</th>
+                <th scope="col" class="p-4">Jumlah</th>
+                <th scope="col" class="p-4">Harga Satuan</th>
+                <th scope="col" class="p-4 text-right">Subtotal</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-zinc-100">
+              @for (item of detail.items; track item.id) {
+                <tr>
+                  <th scope="row" class="p-4 font-semibold text-zinc-900">{{ item.productName || '—' }}</th>
+                  <td class="whitespace-nowrap p-4 text-zinc-700">{{ item.quantity }} unit</td>
+                  <td class="whitespace-nowrap p-4 text-zinc-700">Rp {{ item.priceAtPurchase | number: '1.0-2' }}</td>
+                  <td class="whitespace-nowrap p-4 text-right font-semibold text-zinc-900">
+                    Rp {{ (item.quantity * item.priceAtPurchase) | number: '1.0-2' }}
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </section>
+  } @else if (isLoading) {
+    <p role="status" class="rounded-xl border border-zinc-200 bg-white p-6 text-sm text-zinc-600">
+      Memuat detail pesanan...
+    </p>
+  } @else if (loadError) {
+    <div class="rounded-xl border border-zinc-200 bg-white p-6">
+      <p role="alert" class="text-sm text-red-700">{{ loadError }}</p>
+      @if (orderId !== null) {
+        <button type="button" (click)="loadOrder()" class="mt-3 text-sm font-medium text-zinc-900 underline">
+          Coba lagi
+        </button>
+      }
     </div>
-
-  </div>
-
+  }
 </div>
-
