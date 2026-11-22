@@ -30,10 +30,6 @@ export class CartComponent implements OnInit {
   private cartService = inject(CartService);
   private cdr = inject(ChangeDetectorRef);
 
-  voucherCode = 'WARUNGADINS50';
-  discountAmount = 50000;
-  isVoucherApplied = true;
-
   items: CartItem[] = [];
   isLoading: boolean = false;
 
@@ -160,21 +156,5 @@ export class CartComponent implements OnInit {
 
   get subtotal(): number {
     return this.selectedItems.reduce((acc, curr) => acc + (curr.price * curr.quantity), 0);
-  }
-
-  // Diupdate: Hanya Subtotal - Diskon (Biaya layanan dihapus)
-  get finalTotal(): number {
-    const total = this.subtotal - (this.isVoucherApplied ? this.discountAmount : 0);
-    return Math.max(0, total); 
-  }
-
-  applyVoucher(): void {
-    if (this.voucherCode.trim().toUpperCase() === 'WARANGADINS50') {
-      this.isVoucherApplied = true;
-      this.discountAmount = 50000;
-    } else {
-      this.isVoucherApplied = false;
-      this.discountAmount = 0;
-    }
   }
 }

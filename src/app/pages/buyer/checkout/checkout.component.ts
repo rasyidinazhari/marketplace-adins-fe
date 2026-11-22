@@ -1,16 +1,20 @@
 import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink, Router } from '@angular/router';
-import { FormsModule } from '@angular/forms';
+import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { TopNavbarComponent } from '../../../layout/top-navbar/top-navbar.component';
 import { CompactFooterComponent } from '../../../layout/compact-footer/compact-footer.component';
 import { ModalComponent } from '../../../components/ui/modal/modal.component';
 import { CartService } from '../../../services/cart/cart.service';
 import { OrderService } from '../../../services/order/order.service';
 import { AddressService } from '../../../services/address/address.service';
+import { VoucherService } from '../../../services/voucher/voucher.service';
 import { CartItemResponse } from '../../../models/cart.model';
 import { AddressPayload, AddressResponse } from '../../../models/address.model';
-import { UpdateOrderStatusPayload } from '../../../models/order.model';
+import { OrderPayload, UpdateOrderStatusPayload } from '../../../models/order.model';
+import { SellerVoucher } from '../../../models/voucher.model';
+
+const CENTS_PER_RUPIAH = 100;
 
 export interface AddressItem {
   id: number;
@@ -27,15 +31,23 @@ export interface CheckoutItem {
   productId: number;
   name: string;
   price: number;
+  currentTotalPrice: number | null;
   qty: number;
   image: string;
   storeId: number;
 }
 
+interface CheckoutVoucher {
+  id: number;
+  code: string;
+  discountInCents: number;
+  shortfallInCents: number;
+}
+
 @Component({
   selector: 'app-checkout',
   standalone: true,
-  imports: [CommonModule, RouterLink, FormsModule, TopNavbarComponent, CompactFooterComponent, ModalComponent],
+  imports: [CommonModule, RouterLink, FormsModule, ReactiveFormsModule, TopNavbarComponent, CompactFooterComponent, ModalComponent],
   templateUrl: './checkout.component.html',
   styleUrl: './checkout.component.css'
 })
@@ -43,8 +55,16 @@ export class CheckoutComponent implements OnInit {
   private cartSvc = inject(CartService);
   private orderSvc = inject(OrderService);
   private addressSvc = inject(AddressService);
+  private readonly voucherService = inject(VoucherService);
   private cdr = inject(ChangeDetectorRef);
   private router = inject(Router);
+  private voucherSubtotalInCents: number | null = null;
+
+  readonly voucherControl = new FormControl<number | null>(null);
+  availableVouchers: CheckoutVoucher[] = [];
+  unavailableVouchers: CheckoutVoucher[] = [];
+  isLoadingVouchers = false;
+  voucherLoadFailed = false;
 
   selectedCourier = 'reguler';
   selectedPayment = 'bca_va';
@@ -105,15 +125,18 @@ export class CheckoutComponent implements OnInit {
     this.isLoadingCart = true;
     this.cartSvc.getCartItems().subscribe({
       next: (response: CartItemResponse[]) => {
-        this.orderItems = response.map(item => ({
+        const items = response ?? [];
+        this.orderItems = items.map(item => ({
           productId: item.productId,
           name: item.productName,
           price: item.totalPrice / item.quantity,
+          currentTotalPrice: item.currentTotalPrice ?? null,
           qty: item.quantity,
           image: this.cartSvc.defaultPlaceholder,
           storeId: item.storeId
         }));
         this.isLoadingCart = false;
+        this.prepareVouchers(items);
         this.cdr.detectChanges();
       },
       error: (err) => {
@@ -121,6 +144,66 @@ export class CheckoutComponent implements OnInit {
         this.isLoadingCart = false;
       }
     });
+  }
+
+  private prepareVouchers(items: CartItemResponse[]): void {
+    this.voucherControl.reset();
+    this.availableVouchers = [];
+    this.unavailableVouchers = [];
+    this.voucherSubtotalInCents = null;
+
+    const storeId = items[0]?.storeId;
+    if (storeId === undefined) return;
+
+    let subtotalInCents = 0;
+    for (const item of items) {
+      const total = item.currentTotalPrice;
+      if (item.storeId !== storeId || total == null || total < 0) return;
+      subtotalInCents += Math.round(total * CENTS_PER_RUPIAH);
+    }
+
+    this.voucherSubtotalInCents = subtotalInCents;
+    this.loadVouchers();
+  }
+
+  loadVouchers(): void {
+    const storeId = this.orderItems[0]?.storeId;
+    const subtotalInCents = this.voucherSubtotalInCents;
+    if (storeId === undefined || subtotalInCents === null || this.isLoadingVouchers) return;
+
+    this.isLoadingVouchers = true;
+    this.voucherLoadFailed = false;
+    this.voucherService.getVouchers(storeId).subscribe({
+      next: vouchers => {
+        this.setVoucherOptions(vouchers, subtotalInCents);
+        this.isLoadingVouchers = false;
+      },
+      error: () => {
+        this.isLoadingVouchers = false;
+        this.voucherLoadFailed = true;
+      },
+    });
+  }
+
+  private setVoucherOptions(vouchers: SellerVoucher[], subtotalInCents: number): void {
+    const activeVouchers = vouchers.filter(voucher => voucher.isActive);
+    const voucherOptions = activeVouchers.map(voucher => {
+      const calculatedDiscountInCents = Math.round(subtotalInCents * voucher.discountPercentage / 100);
+      const maxDiscountInCents = voucher.maxDiscountAmount * CENTS_PER_RUPIAH;
+      const minPurchaseInCents = voucher.minPurchaseAmount * CENTS_PER_RUPIAH;
+
+      return {
+        id: voucher.id,
+        code: voucher.code,
+        discountInCents: Math.min(calculatedDiscountInCents, maxDiscountInCents),
+        shortfallInCents: Math.max(minPurchaseInCents - subtotalInCents, 0),
+      };
+    });
+
+    this.availableVouchers = voucherOptions.filter(voucher => voucher.shortfallInCents === 0)
+      .sort((first, second) => second.discountInCents - first.discountInCents);
+    this.unavailableVouchers = voucherOptions.filter(voucher => voucher.shortfallInCents > 0)
+      .sort((first, second) => first.shortfallInCents - second.shortfallInCents);
   }
 
   // --- 2. FETCH ADDRESSES ---
@@ -154,7 +237,25 @@ export class CheckoutComponent implements OnInit {
     });
   }
 
+  get canChooseVoucher(): boolean {
+    return this.voucherSubtotalInCents !== null;
+  }
+
+  get selectedVoucher(): CheckoutVoucher | undefined {
+    const voucherId = this.voucherControl.value;
+    return voucherId === null ? undefined : this.availableVouchers.find(voucher => voucher.id === voucherId);
+  }
+
+  itemSubtotal(item: CheckoutItem): number {
+    return this.selectedVoucher && item.currentTotalPrice !== null
+      ? item.currentTotalPrice
+      : item.price * item.qty;
+  }
+
   get subtotal(): number {
+    if (this.selectedVoucher && this.voucherSubtotalInCents !== null) {
+      return this.voucherSubtotalInCents / CENTS_PER_RUPIAH;
+    }
     return this.orderItems.reduce((acc, item) => acc + (item.price * item.qty), 0);
   }
 
@@ -163,8 +264,11 @@ export class CheckoutComponent implements OnInit {
     return courier ? courier.price : 15000;
   }
 
-  // Voucher & Diskon dihapus, grandTotal hanya Subtotal
   get grandTotal(): number {
+    const voucher = this.selectedVoucher;
+    if (voucher && this.voucherSubtotalInCents !== null) {
+      return (this.voucherSubtotalInCents - voucher.discountInCents) / CENTS_PER_RUPIAH;
+    }
     return this.subtotal;
   }
 
@@ -183,10 +287,12 @@ export class CheckoutComponent implements OnInit {
 
     const storeId = this.orderItems[0].storeId;
 
-    const payload = {
+    const payload: OrderPayload = {
       storeId: storeId,
       addressId: this.shippingAddress.id
     };
+    const voucher = this.selectedVoucher;
+    if (voucher) payload.voucherId = voucher.id;
 
     const statusPayload: UpdateOrderStatusPayload = { status: 'ON_PROCESS' };
 

@@ -11,6 +11,7 @@ export enum OrderStatus {
 export interface OrderPayload {
     storeId: number;
     addressId: number;
+    voucherId?: number;
     voucherCode?: string | null; // Sesuai CheckoutRequest (opsional)
 }
 

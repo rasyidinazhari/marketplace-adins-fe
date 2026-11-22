@@ -152,11 +152,13 @@
                   <img [src]="item.image" [alt]="item.name" class="w-12 h-12 rounded-md object-cover bg-zinc-100 border border-zinc-200/60" />
                   <div class="truncate">
                     <div class="text-xs font-medium text-zinc-900 truncate">{{ item.name }}</div>
-                    <div class="text-[11px] text-zinc-500">{{ item.qty }}x • Rp {{ item.price | number:'1.0-0' }}</div>
+                    <div class="text-[11px] text-zinc-500">
+                      {{ item.qty }}x • Rp {{ (selectedVoucher ? itemSubtotal(item) / item.qty : item.price) | number:(selectedVoucher ? '1.0-2' : '1.0-0') }}
+                    </div>
                   </div>
                 </div>
                 <div class="text-xs font-bold text-zinc-950 whitespace-nowrap">
-                  Rp {{ (item.price * item.qty) | number:'1.0-0' }}
+                  Rp {{ itemSubtotal(item) | number:(selectedVoucher ? '1.0-2' : '1.0-0') }}
                 </div>
               </div>
             }
@@ -173,17 +175,67 @@
           Ringkasan Tagihan
         </h2>
 
+        @if (canChooseVoucher) {
+          <div class="space-y-2 text-xs text-zinc-700">
+            @if (isLoadingVouchers) {
+              <p role="status" class="text-zinc-500">Memuat voucher toko...</p>
+            } @else if (voucherLoadFailed) {
+              <p role="alert" class="text-red-700">Gagal memuat voucher. Anda bisa lanjut tanpa voucher.</p>
+              <button type="button" (click)="loadVouchers()" [disabled]="isProcessing"
+                      class="font-medium text-zinc-900 underline disabled:opacity-50">
+                Coba muat ulang voucher
+              </button>
+            } @else if (availableVouchers.length || unavailableVouchers.length) {
+              <fieldset [disabled]="isProcessing" class="space-y-1.5">
+                <label for="checkout-voucher" class="block font-semibold text-zinc-900">Voucher Toko</label>
+                <select id="checkout-voucher" [formControl]="voucherControl"
+                        class="w-full rounded-md border border-zinc-200 bg-white px-2.5 py-2 text-xs text-zinc-900 disabled:opacity-50">
+                  <option [ngValue]="null">Tanpa voucher</option>
+                  @if (availableVouchers.length) {
+                    <optgroup label="Bisa dipakai">
+                      @for (voucher of availableVouchers; track voucher.id) {
+                        <option [ngValue]="voucher.id">
+                          {{ voucher.code }} · Hemat Rp {{ voucher.discountInCents / 100 | number:'1.0-2' }}
+                        </option>
+                      }
+                    </optgroup>
+                  }
+                  @if (unavailableVouchers.length) {
+                    <optgroup label="Minimum belanja belum terpenuhi" disabled>
+                      @for (voucher of unavailableVouchers; track voucher.id) {
+                        <option [ngValue]="voucher.id" disabled>
+                          {{ voucher.code }} · Tambah Rp {{ voucher.shortfallInCents / 100 | number:'1.0-2' }} lagi
+                        </option>
+                      }
+                    </optgroup>
+                  }
+                </select>
+              </fieldset>
+            } @else {
+              <p class="text-zinc-500">Belum ada voucher aktif di toko ini.</p>
+            }
+          </div>
+        } @else if (!isLoadingCart && orderItems.length > 0) {
+          <p class="text-xs text-zinc-500">Voucher tersedia jika barang berasal dari satu toko dan harga terkininya tersedia.</p>
+        }
+
         <div class="space-y-2 text-xs text-zinc-600">
           <div class="flex justify-between">
             <span>Subtotal Produk ({{ orderItems.length }} Barang)</span>
-            <span class="font-medium text-zinc-900">Rp {{ subtotal | number:'1.0-0' }}</span>
+            <span class="font-medium text-zinc-900">Rp {{ subtotal | number:(selectedVoucher ? '1.0-2' : '1.0-0') }}</span>
           </div>
+          @if (selectedVoucher; as voucher) {
+            <div class="flex justify-between gap-2 text-emerald-700">
+              <span>Voucher {{ voucher.code }}</span>
+              <span class="whitespace-nowrap font-medium">− Rp {{ voucher.discountInCents / 100 | number:'1.0-2' }}</span>
+            </div>
+          }
         </div>
 
         <div class="pt-4 border-t border-zinc-200 flex items-baseline justify-between">
-          <span class="text-sm font-semibold text-zinc-950">Total Pembayaran</span>
+          <span class="text-sm font-semibold text-zinc-950">{{ selectedVoucher ? 'Estimasi Total' : 'Total Pembayaran' }}</span>
           <span class="text-xl font-extrabold text-zinc-950">
-            Rp {{ grandTotal | number:'1.0-0' }}
+            Rp {{ grandTotal | number:(selectedVoucher ? '1.0-2' : '1.0-0') }}
           </span>
         </div>
 

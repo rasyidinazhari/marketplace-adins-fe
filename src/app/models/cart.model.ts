@@ -15,6 +15,7 @@ export interface CartItemResponse {
     storeName: string;
     quantity: number;
     totalPrice: number;
+    currentTotalPrice: number | null;
     createdAt: string; 
     updatedAt: string; 
   }
