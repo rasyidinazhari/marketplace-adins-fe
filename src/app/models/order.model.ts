@@ -1,3 +1,12 @@
+import { OrderItemResponse } from './orderItem.model';
+
+export enum OrderStatus {
+    PENDING_PAYMENT = 0,
+    ON_PROCESS = 1,
+    ON_DELIVERY = 2,
+    DELIVERED = 3,
+}
+
 // Payload untuk membuat pesanan baru (POST)
 export interface OrderPayload {
     storeId: number;
@@ -7,7 +16,7 @@ export interface OrderPayload {
 
 // Payload untuk mengubah status pesanan (PATCH)
 export interface UpdateOrderStatusPayload {
-    status: string;
+    status: keyof typeof OrderStatus;
 }
 
 // Response dari API
@@ -22,9 +31,17 @@ export interface OrderResponse {
     voucherId: number | null;
     voucherCode: string | null;
     discountAmount: number | null;
-    totalBeforeDiscount: number;
-    totalAfterDiscount: number;
-    orderStatus: string;
-    createdAt: string; 
-    updatedAt: string; 
+    totalBeforeDisc: number;
+    totalAfterDisc: number | null;
+    orderStatus: OrderStatus;
+    createdAt: string | null;
+    updatedAt: string | null;
+}
+
+export interface OrderDetailResponse extends OrderResponse {
+    items: OrderItemResponse[];
+    phoneNumber: string;
+    fullAddress: string | null;
+    city: string;
+    postalCode: string;
 }
