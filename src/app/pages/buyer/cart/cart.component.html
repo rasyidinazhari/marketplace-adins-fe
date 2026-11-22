@@ -1,7 +1,7 @@
 <app-top-navbar></app-top-navbar>
 
 <main class="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
-  
+
   <!-- Breadcrumb -->
   <nav class="flex items-center gap-2 text-xs text-zinc-500 mb-6">
     <a [routerLink]="'/'" class="hover:text-zinc-900 transition-colors">Beranda</a>
@@ -12,32 +12,40 @@
   <div class="flex items-center justify-between pb-6 border-b border-zinc-200 mb-8">
     <div>
       <h1 class="text-2xl font-bold tracking-tight text-zinc-950">Keranjang Belanja</h1>
-      <p class="text-xs text-zinc-500 mt-1">Kelola barang pilihan Anda sebelum melanjutkan ke pembayaran.</p>
+      <p class="text-xs text-zinc-500 mt-1">
+        @if (items.length > 0) {
+          Kelola barang pilihan Anda sebelum melanjutkan ke pembayaran.
+        } @else {
+          Keranjang Anda saat ini belum memiliki barang untuk diproses.
+        }
+      </p>
     </div>
     <span class="rounded-full bg-zinc-100 px-3 py-1 text-xs font-semibold text-zinc-700 border border-zinc-200">
       {{ items.length }} Barang
     </span>
   </div>
 
-  <!-- Loading State -->
-  @if (isLoading) {
-    <div class="text-center py-24">
-      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-zinc-900 mx-auto mb-4"></div>
-      <p class="text-sm text-zinc-500">Memuat keranjang...</p>
+  @if (errorMessage) {
+    <div class="text-center py-16 rounded-2xl border border-red-200 bg-red-50 p-8 space-y-3">
+      <p class="text-sm font-medium text-red-700">{{ errorMessage }}</p>
+      <button (click)="loadCart()"
+              class="px-4 py-2 rounded-md bg-zinc-900 text-white text-xs font-semibold hover:bg-zinc-800 transition-colors">
+        Coba Muat Ulang
+      </button>
     </div>
-  } 
+  }
   @else if (items.length > 0) {
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-      
+
       <!-- Cart Items Section (2 cols) -->
       <div class="lg:col-span-2 space-y-6">
-        
+
         <!-- Header Action -->
         <div class="flex items-center justify-between rounded-xl border border-zinc-200/80 bg-white p-4 shadow-2xs">
           <label class="flex items-center gap-3 text-xs font-medium text-zinc-800 cursor-pointer select-none">
-            <input type="checkbox" 
-                   [checked]="allSelected" 
-                   (change)="toggleSelectAll()" 
+            <input type="checkbox"
+                   [checked]="allSelected"
+                   (change)="toggleSelectAll()"
                    class="rounded border-zinc-300 text-zinc-900 focus:ring-zinc-950 h-4 w-4" />
             <span>Pilih Semua Barang ({{ items.length }})</span>
           </label>
@@ -49,13 +57,13 @@
         <!-- LOOPING PER TOKO -->
         @for (group of groupedItems; track group.storeName) {
           <div class="rounded-xl border border-zinc-200/80 bg-white shadow-2xs overflow-hidden">
-            
+
             <!-- Header Toko -->
             <div class="bg-zinc-50/80 px-5 py-3 border-b border-zinc-200 flex items-center justify-between">
               <label class="flex items-center gap-3 text-xs font-bold text-zinc-900 cursor-pointer select-none">
-                <input type="checkbox" 
-                       [checked]="isAllStoreSelected(group.items)" 
-                       (change)="toggleStoreSelection(group.items)" 
+                <input type="checkbox"
+                       [checked]="isAllStoreSelected(group.items)"
+                       (change)="toggleStoreSelection(group.items)"
                        class="rounded border-zinc-300 text-zinc-900 focus:ring-zinc-950 h-4 w-4" />
                 <svg class="w-4 h-4 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
                 <span>{{ group.storeName }}</span>
@@ -66,10 +74,10 @@
             <div class="divide-y divide-zinc-100">
               @for (item of group.items; track item.id) {
                 <div class="p-5 flex items-start gap-4">
-                  
+
                   <!-- Checkbox Item -->
-                  <input type="checkbox" 
-                         [(ngModel)]="item.selected" 
+                  <input type="checkbox"
+                         [(ngModel)]="item.selected"
                          class="mt-1 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-950 h-4 w-4" />
 
                   <!-- Gambar -->
@@ -102,7 +110,7 @@
 
                       <!-- Shadcn Quantity Stepper -->
                       <div class="flex items-center border border-zinc-200 rounded-md bg-white shadow-2xs">
-                        <button (click)="updateQuantity(item, -1)" 
+                        <button (click)="updateQuantity(item, -1)"
                                 [disabled]="item.quantity <= 1"
                                 class="px-2 py-0.5 text-zinc-600 hover:bg-zinc-100 rounded-l-md text-xs font-semibold disabled:opacity-30">
                           -
@@ -110,7 +118,7 @@
                         <span class="px-2.5 py-0.5 text-xs font-semibold text-zinc-900 min-w-[1.5rem] text-center border-x border-zinc-200">
                           {{ item.quantity }}
                         </span>
-                        <button (click)="updateQuantity(item, 1)" 
+                        <button (click)="updateQuantity(item, 1)"
                                 class="px-2 py-0.5 text-zinc-600 hover:bg-zinc-100 rounded-r-md text-xs font-semibold">
                           +
                         </button>
@@ -137,17 +145,21 @@
           <div class="space-y-2">
             <label class="text-xs font-semibold text-zinc-700">Kode Promo / Voucher</label>
             <div class="flex gap-2">
-              <input type="text" 
-                     [(ngModel)]="voucherCode" 
-                     placeholder="Ketik voucher..." 
+              <input type="text"
+                     [(ngModel)]="voucherCode"
+                     placeholder="Ketik voucher..."
                      class="flex-1 uppercase font-mono px-3 py-1.5 text-xs rounded-md border border-zinc-200 bg-zinc-50/50 focus:bg-white focus:outline-none focus:ring-1 focus:ring-zinc-950" />
               <button (click)="applyVoucher()" class="px-3 py-1.5 rounded-md bg-zinc-900 text-white text-xs font-medium hover:bg-zinc-800 transition-colors">
                 Pakai
               </button>
             </div>
-            @if (isVoucherApplied) {
+            @if (isVoucherApplied && activeDiscount > 0) {
               <div class="text-[11px] text-emerald-600 font-medium flex items-center gap-1">
-                ✓ Voucher berhasil diterapkan (-Rp 50.000)
+                ✓ Voucher berhasil diterapkan (-Rp {{ activeDiscount | number:'1.0-0' }})
+              </div>
+            } @else if (voucherMessage) {
+              <div class="text-[11px] text-amber-600 font-medium">
+                {{ voucherMessage }}
               </div>
             }
           </div>
@@ -158,10 +170,10 @@
               <span>Total Harga ({{ selectedItems.length }} barang)</span>
               <span class="font-medium text-zinc-900">Rp {{ subtotal | number:'1.0-0' }}</span>
             </div>
-            @if (isVoucherApplied) {
+            @if (activeDiscount > 0) {
               <div class="flex justify-between text-emerald-600">
                 <span>Diskon Kupon</span>
-                <span class="font-medium">- Rp {{ discountAmount | number:'1.0-0' }}</span>
+                <span class="font-medium">- Rp {{ activeDiscount | number:'1.0-0' }}</span>
               </div>
             }
           </div>
@@ -175,7 +187,7 @@
           </div>
 
           <!-- Checkout CTA button -->
-          <a [routerLink]="['/checkout']" 
+          <a [routerLink]="['/checkout']"
              [class.pointer-events-none]="selectedItems.length === 0"
              [class.opacity-50]="selectedItems.length === 0"
              class="w-full inline-flex items-center justify-center gap-2 rounded-md bg-zinc-900 px-4 py-2.5 text-sm font-medium text-zinc-50 shadow-sm hover:bg-zinc-800 transition-colors text-center">
@@ -194,17 +206,29 @@
     </div>
   } @else {
     <!-- Empty Cart State -->
-    <div class="text-center py-24 rounded-2xl border border-dashed border-zinc-200 bg-white p-8">
-      <div class="w-16 h-16 rounded-full bg-zinc-100 text-zinc-400 mx-auto flex items-center justify-center mb-4">
+    <div class="rounded-2xl border border-dashed border-zinc-200 bg-white p-8 sm:p-12 text-center space-y-6">
+      <div class="w-16 h-16 rounded-full bg-zinc-100 text-zinc-400 mx-auto flex items-center justify-center">
         <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/></svg>
       </div>
-      <h3 class="text-lg font-bold text-zinc-950">Keranjang Belanja Masih Kosong</h3>
-      <p class="text-xs text-zinc-500 max-w-sm mx-auto mt-1 mb-6">
-        Yuk jelajahi produk menarik dan tambahkan ke keranjang untuk segera berbelanja.
-      </p>
-      <a [routerLink]="['/products']" class="px-5 py-2.5 rounded-md bg-zinc-900 text-white text-xs font-semibold hover:bg-zinc-800 transition-colors shadow-2xs">
-        Mulai Belanja Sekarang
-      </a>
+
+      <div class="space-y-1.5">
+        <h3 class="text-lg font-bold text-zinc-950">Keranjang Belanja Masih Kosong</h3>
+        <p class="text-xs text-zinc-500 max-w-md mx-auto leading-relaxed">
+          Anda belum menambahkan barang apa pun ke keranjang. Mulai belanja untuk memilih produk dan menggunakan promo yang tersedia.
+        </p>
+      </div>
+
+      <div class="flex flex-wrap items-center justify-center gap-3 pt-1">
+        <a [routerLink]="['/products']"
+           class="inline-flex items-center gap-2 px-5 py-2.5 rounded-md bg-zinc-900 text-white text-xs font-semibold hover:bg-zinc-800 transition-colors shadow-2xs">
+          <span>Ke Daftar Produk</span>
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+        </a>
+        <a [routerLink]="['/buyer/orders']"
+           class="px-5 py-2.5 rounded-md border border-zinc-200 bg-white text-zinc-700 text-xs font-semibold hover:bg-zinc-50 transition-colors">
+          Lihat Pesanan Saya
+        </a>
+      </div>
     </div>
   }
 
