@@ -24,7 +24,7 @@ export class SellerLayoutComponent {
 
   get storeName(): string {
     const user = this.authSvc.getUser();
-    console.log('user ', user)
-    return user?.stores?.[0]?.storeName || user?.stores?.[0]?.name || 'Adins Official Store';
+    console.log('user ', user);
+    return this.authSvc.getStoreName() || 'Adins Official Store';
   }
 }
