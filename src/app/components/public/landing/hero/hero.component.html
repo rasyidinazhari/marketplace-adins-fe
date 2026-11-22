@@ -46,25 +46,48 @@
         </svg>
       </a>
 
-      <a
-        [routerLink]="'/seller/products'"
-        class="inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-medium text-zinc-900 bg-white hover:bg-zinc-50 rounded-md border border-zinc-200/90 shadow-2xs transition-all hover:scale-[1.01] active:scale-[0.99]"
-      >
-        <svg
-          class="w-4 h-4 text-zinc-500"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
+      @if (isSeller) {
+        <a
+          [routerLink]="'/seller/products'"
+          class="inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-medium text-zinc-900 bg-white hover:bg-zinc-50 rounded-md border border-zinc-200/90 shadow-2xs transition-all hover:scale-[1.01] active:scale-[0.99]"
         >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
-          />
-        </svg>
-        <span>Masuk Dashboard Seller</span>
-      </a>
+          <svg
+            class="w-4 h-4 text-zinc-500"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+            />
+          </svg>
+          <span>Masuk Dashboard Seller</span>
+        </a>
+      } @else {
+        <button
+          type="button"
+          (click)="scrollToRekomendasi()"
+          class="cursor-pointer inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-medium text-zinc-900 bg-white hover:bg-zinc-50 rounded-md border border-zinc-200/90 shadow-2xs transition-all hover:scale-[1.01] active:scale-[0.99]"
+        >
+          <svg
+            class="w-4 h-4 text-zinc-600"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M19 14l-7 7m0 0l-7-7m7 7V3"
+            />
+          </svg>
+          <span>Lihat Produk Terbaru</span>
+        </button>
+      }
     </div>
 
     <!-- Feature highlights bar -->

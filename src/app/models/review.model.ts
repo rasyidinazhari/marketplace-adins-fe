@@ -2,6 +2,7 @@ export interface ProductReview {
   id: number;
   productId: number;
   productName?: string;
+  orderId?: number;
   userId: number;
   userName?: string;
   rating: number;
@@ -17,6 +18,7 @@ export interface ProductReview {
 export interface CreateReviewPayload {
   rating: number;
   comment: string;
+  orderId?: number;
   userId?: number;
   productId?: number;
 }
