@@ -1,6 +1,6 @@
 import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { RouterLink, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { TopNavbarComponent } from '../../../layout/top-navbar/top-navbar.component';
 import { CompactFooterComponent } from '../../../layout/compact-footer/compact-footer.component';
@@ -8,6 +8,13 @@ import { ModalComponent } from '../../../components/ui/modal/modal.component';
 import { OrderService } from '../../../services/order/order.service';
 import { ReviewService } from '../../../services/review/review.service';
 import { OrderItemService } from '../../../services/orderItem/order-item.service';
+
+export interface SavedReviewInfo {
+  orderId: number;
+  productId: number;
+  rating: number;
+  comment: string;
+}
 
 export interface BuyerOrder {
   id: number;
@@ -30,6 +37,7 @@ export interface BuyerOrder {
   styleUrl: './buyer-order-list.component.css'
 })
 export class BuyerOrderListComponent implements OnInit {
+  private router = inject(Router);
   private orderSvc = inject(OrderService);
   private reviewSvc = inject(ReviewService);
   private orderItemSvc = inject(OrderItemService);
@@ -38,6 +46,7 @@ export class BuyerOrderListComponent implements OnInit {
   private readonly defaultImage =
     'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600&auto=format&fit=crop&q=80';
   private readonly REVIEWED_STORAGE_KEY = 'warungadins_reviewed_orders';
+  private readonly REVIEWED_DATA_KEY = 'warungadins_reviewed_data';
 
   activeTab = 'Semua';
   tabs = ['Semua', 'Menunggu Pembayaran', 'Diproses', 'Dikirim', 'Selesai'];
@@ -48,9 +57,11 @@ export class BuyerOrderListComponent implements OnInit {
 
   // Set of order IDs that have already been reviewed by the buyer
   reviewedOrderIds = new Set<number>();
+  reviewedReviewsMap: Record<number, SavedReviewInfo> = {};
 
   // Review modal state
   isReviewModalOpen = false;
+  isViewOnlyReview = false;
   selectedOrderForReview: BuyerOrder | null = null;
   reviewRating = 5;
   hoveredRating = 0;
@@ -146,6 +157,10 @@ export class BuyerOrderListComponent implements OnInit {
     });
   }
 
+  navigateToOrder(orderId: number): void {
+    this.router.navigate(['/buyer/orders', orderId]);
+  }
+
   // --- Review functionality ---
 
   private loadReviewedOrderIds(): void {
@@ -155,15 +170,23 @@ export class BuyerOrderListComponent implements OnInit {
         const parsed: number[] = JSON.parse(raw);
         this.reviewedOrderIds = new Set(parsed);
       }
+      const rawData = localStorage.getItem(this.REVIEWED_DATA_KEY);
+      if (rawData) {
+        this.reviewedReviewsMap = JSON.parse(rawData);
+      }
     } catch (e) {
       console.warn('Gagal membaca data ulasan tersimpan dari local storage', e);
     }
   }
 
-  private markOrderAsReviewed(orderId: number): void {
+  private markOrderAsReviewed(orderId: number, info?: SavedReviewInfo): void {
     this.reviewedOrderIds.add(orderId);
+    if (info) {
+      this.reviewedReviewsMap[orderId] = info;
+    }
     try {
       localStorage.setItem(this.REVIEWED_STORAGE_KEY, JSON.stringify(Array.from(this.reviewedOrderIds)));
+      localStorage.setItem(this.REVIEWED_DATA_KEY, JSON.stringify(this.reviewedReviewsMap));
     } catch (e) {
       console.warn('Gagal menyimpan status ulasan ke storage', e);
     }
@@ -174,6 +197,7 @@ export class BuyerOrderListComponent implements OnInit {
   }
 
   openReviewModal(order: BuyerOrder): void {
+    this.isViewOnlyReview = false;
     this.selectedOrderForReview = order;
     this.reviewRating = 5;
     this.hoveredRating = 0;
@@ -196,19 +220,64 @@ export class BuyerOrderListComponent implements OnInit {
     }
   }
 
+  openViewReviewModal(order: BuyerOrder): void {
+    this.isViewOnlyReview = true;
+    this.selectedOrderForReview = order;
+    this.reviewError = '';
+    this.reviewSuccessMessage = '';
+
+    const cached = this.reviewedReviewsMap[order.id];
+    if (cached) {
+      this.reviewRating = cached.rating;
+      this.reviewComment = cached.comment;
+    } else {
+      this.reviewRating = 5;
+      this.reviewComment = 'Memuat ulasan...';
+
+      const productId = order.productId ?? 1;
+      this.reviewSvc.getReviewsByProductId(productId).subscribe({
+        next: (reviews) => {
+          const found = reviews.find((r: any) => r.orderId === order.id || r.productId === productId);
+          if (found) {
+            this.reviewRating = found.rating || 5;
+            this.reviewComment = found.comment || '';
+            this.markOrderAsReviewed(order.id, {
+              orderId: order.id,
+              productId,
+              rating: this.reviewRating,
+              comment: this.reviewComment
+            });
+            this.cdr.detectChanges();
+          } else {
+            this.reviewComment = 'Ulasan telah berhasil dikirim sebelumnya.';
+            this.cdr.detectChanges();
+          }
+        },
+        error: () => {
+          this.reviewComment = 'Ulasan telah berhasil dikirim sebelumnya.';
+          this.cdr.detectChanges();
+        }
+      });
+    }
+
+    this.isReviewModalOpen = true;
+  }
+
   closeReviewModal(): void {
     this.isReviewModalOpen = false;
     this.selectedOrderForReview = null;
+    this.isViewOnlyReview = false;
     this.reviewError = '';
     this.reviewSuccessMessage = '';
   }
 
   setRating(rating: number): void {
+    if (this.isViewOnlyReview) return;
     this.reviewRating = rating;
   }
 
   submitReview(): void {
-    if (!this.selectedOrderForReview) return;
+    if (!this.selectedOrderForReview || this.isViewOnlyReview) return;
 
     const order = this.selectedOrderForReview;
     const productId = order.productId ?? 1;
@@ -237,7 +306,12 @@ export class BuyerOrderListComponent implements OnInit {
         next: () => {
           this.isSubmittingReview = false;
           this.reviewSuccessMessage = 'Terima kasih! Ulasan Anda berhasil dikirim.';
-          this.markOrderAsReviewed(order.id);
+          this.markOrderAsReviewed(order.id, {
+            orderId: order.id,
+            productId,
+            rating: this.reviewRating,
+            comment: this.reviewComment.trim()
+          });
           this.cdr.detectChanges();
           setTimeout(() => {
             this.closeReviewModal();
