@@ -1,27 +1,25 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { AuthService, UserRole } from '../../services/auth/auth.service';
-import { LogoutService } from '../../services/logout/logout.service';
 import { TopNavbarComponent } from './top-navbar.component';
 
 describe('TopNavbarComponent', () => {
   let component: TopNavbarComponent;
   let fixture: ComponentFixture<TopNavbarComponent>;
   let role: UserRole | null;
-  let logout: jasmine.Spy;
+  let clearToken: jasmine.Spy;
 
   beforeEach(async () => {
     role = null;
-    logout = jasmine.createSpy('logout').and.callFake(() => { role = null; });
+    clearToken = jasmine.createSpy('clearToken').and.callFake(() => { role = null; });
     await TestBed.configureTestingModule({
       imports: [TopNavbarComponent],
       providers: [
         provideRouter([]),
         {
           provide: AuthService,
-          useValue: { getCurrentRole: () => role, getUser: () => ({ name: 'Dina' }) },
+          useValue: { getCurrentRole: () => role, getUser: () => ({ name: 'Dina' }), clearToken },
         },
-        { provide: LogoutService, useValue: { logout } },
       ],
     }).compileComponents();
 
@@ -97,7 +95,7 @@ describe('TopNavbarComponent', () => {
     dropdown.querySelector('button')!.click();
     fixture.detectChanges();
 
-    expect(logout).toHaveBeenCalledTimes(1);
+    expect(clearToken).toHaveBeenCalledTimes(1);
     expect(navigateHome).toHaveBeenCalledWith('/', { replaceUrl: true });
     expect(navbar.querySelector('#navbar-account-panel')).toBeNull();
     expect(navbar.querySelector('a[href="/buyer/login"]')?.textContent).toContain('Masuk');

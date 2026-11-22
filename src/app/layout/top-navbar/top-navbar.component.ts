@@ -2,7 +2,6 @@ import { Component, ElementRef, HostListener, ViewChild, inject } from '@angular
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { AuthService, UserRole } from '../../services/auth/auth.service';
-import { LogoutService } from '../../services/logout/logout.service';
 
 @Component({
   selector: 'app-top-navbar',
@@ -13,7 +12,6 @@ import { LogoutService } from '../../services/logout/logout.service';
 })
 export class TopNavbarComponent {
   private readonly authService = inject(AuthService);
-  private readonly logoutService = inject(LogoutService);
   private readonly router = inject(Router);
 
   @ViewChild('accountMenu') private accountMenu?: ElementRef<HTMLElement>;
@@ -48,7 +46,7 @@ export class TopNavbarComponent {
 
   logout(): void {
     this.isAccountMenuOpen = false;
-    this.logoutService.logout();
+    this.authService.clearToken();
     void this.router.navigateByUrl('/', { replaceUrl: true });
   }
 }
