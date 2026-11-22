@@ -8,9 +8,11 @@ import { ModalComponent } from '../../../components/ui/modal/modal.component';
 import { CartService } from '../../../services/cart/cart.service';
 import { OrderService } from '../../../services/order/order.service';
 import { AddressService } from '../../../services/address/address.service';
+import { VoucherService } from '../../../services/voucher/voucher.service';
 import { CartItemResponse } from '../../../models/cart.model';
 import { AddressPayload, AddressResponse } from '../../../models/address.model';
-import { UpdateOrderStatusPayload } from '../../../models/order.model';
+import { OrderPayload, UpdateOrderStatusPayload } from '../../../models/order.model';
+import { SellerVoucher } from '../../../models/voucher.model';
 
 export interface AddressItem {
   id: number;
@@ -24,12 +26,14 @@ export interface AddressItem {
 }
 
 export interface CheckoutItem {
+  id?: number;
   productId: number;
   name: string;
   price: number;
   qty: number;
   image: string;
   storeId: number;
+  storeName?: string;
 }
 
 @Component({
@@ -43,6 +47,7 @@ export class CheckoutComponent implements OnInit {
   private cartSvc = inject(CartService);
   private orderSvc = inject(OrderService);
   private addressSvc = inject(AddressService);
+  private voucherSvc = inject(VoucherService);
   private cdr = inject(ChangeDetectorRef);
   private router = inject(Router);
 
@@ -51,6 +56,14 @@ export class CheckoutComponent implements OnInit {
   isProcessing = false;
   isLoadingCart = false;
   isLoadingAddress = false;
+
+  // Voucher State
+  availableVouchers: SellerVoucher[] = [];
+  isLoadingVouchers = false;
+  isVoucherModalOpen = false;
+  selectedVoucher: SellerVoucher | null = null;
+  currentStoreName = '';
+  currentStoreId = 0;
 
   // Modal Ubah Alamat State
   isAddressModalOpen = false;
@@ -105,14 +118,28 @@ export class CheckoutComponent implements OnInit {
     this.isLoadingCart = true;
     this.cartSvc.getCartItems().subscribe({
       next: (response: CartItemResponse[]) => {
-        this.orderItems = response.map(item => ({
+        const selectedIds = this.cartSvc.getSelectedCartItemIds();
+        const filteredResponse = selectedIds.length > 0
+          ? response.filter(item => selectedIds.includes(item.id))
+          : response;
+
+        this.orderItems = filteredResponse.map(item => ({
+          id: item.id,
           productId: item.productId,
           name: item.productName,
           price: item.totalPrice / item.quantity,
           qty: item.quantity,
           image: this.cartSvc.defaultPlaceholder,
-          storeId: item.storeId
+          storeId: item.storeId,
+          storeName: item.storeName || 'Toko'
         }));
+
+        if (this.orderItems.length > 0) {
+          this.currentStoreId = this.orderItems[0].storeId;
+          this.currentStoreName = this.orderItems[0].storeName || 'Toko';
+          this.loadStoreVouchers(this.currentStoreId);
+        }
+
         this.isLoadingCart = false;
         this.cdr.detectChanges();
       },
@@ -123,7 +150,30 @@ export class CheckoutComponent implements OnInit {
     });
   }
 
-  // --- 2. FETCH ADDRESSES ---
+  // --- 2. FETCH STORE VOUCHERS ---
+  loadStoreVouchers(storeId: number): void {
+    this.isLoadingVouchers = true;
+    this.voucherSvc.getVouchers(storeId).subscribe({
+      next: (vouchers) => {
+        // Hanya ambil voucher yang aktif milik toko ini
+        this.availableVouchers = (vouchers || []).filter(v => v.isActive);
+        // Jika voucher yang sudah dipilih tidak ada lagi di daftar aktif, lepas
+        if (this.selectedVoucher && !this.availableVouchers.some(v => v.id === this.selectedVoucher!.id)) {
+          this.selectedVoucher = null;
+        }
+        this.isLoadingVouchers = false;
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        console.error('Gagal mengambil voucher toko', err);
+        this.availableVouchers = [];
+        this.isLoadingVouchers = false;
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  // --- 3. FETCH ADDRESSES ---
   loadAddresses(): void {
     this.isLoadingAddress = true;
     this.addressSvc.getAllAddresses().subscribe({
@@ -163,9 +213,38 @@ export class CheckoutComponent implements OnInit {
     return courier ? courier.price : 15000;
   }
 
-  // Voucher & Diskon dihapus, grandTotal hanya Subtotal
+  // Perhitungan Diskon Voucher Toko (Maksimal 1 Voucher per Order)
+  get voucherDiscount(): number {
+    if (!this.selectedVoucher) return 0;
+    const rawDiscount = Math.round((this.subtotal * this.selectedVoucher.discountPercentage) / 100);
+    return Math.min(rawDiscount, this.selectedVoucher.maxDiscountAmount);
+  }
+
   get grandTotal(): number {
-    return this.subtotal;
+    return Math.max(0, this.subtotal - this.voucherDiscount);
+  }
+
+  // --- FUNGSI MODAL & SELEKSI VOUCHER ---
+  openVoucherModal(): void {
+    this.isVoucherModalOpen = true;
+  }
+
+  closeVoucherModal(): void {
+    this.isVoucherModalOpen = false;
+  }
+
+  isVoucherEligible(voucher: SellerVoucher): boolean {
+    return voucher.isActive && this.subtotal >= voucher.minPurchaseAmount;
+  }
+
+  applyVoucher(voucher: SellerVoucher): void {
+    if (!this.isVoucherEligible(voucher)) return;
+    this.selectedVoucher = voucher;
+    this.closeVoucherModal();
+  }
+
+  removeVoucher(): void {
+    this.selectedVoucher = null;
   }
 
   processPayment(): void {
@@ -183,15 +262,18 @@ export class CheckoutComponent implements OnInit {
 
     const storeId = this.orderItems[0].storeId;
 
-    const payload = {
+    const payload: OrderPayload = {
       storeId: storeId,
-      addressId: this.shippingAddress.id
+      addressId: this.shippingAddress.id,
+      voucherId: this.selectedVoucher ? this.selectedVoucher.id : null,
+      voucherCode: this.selectedVoucher ? this.selectedVoucher.code : null
     };
 
     const statusPayload: UpdateOrderStatusPayload = { status: 'ON_PROCESS' };
 
     this.orderSvc.createOrder(payload).subscribe({
       next: (res) => {
+        this.cartSvc.clearSelectedCartItemIds();
         this.orderSvc.updateOrderStatus(res.id, statusPayload).subscribe({
           next: () => {
             this.isProcessing = false;

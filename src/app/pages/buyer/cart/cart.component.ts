@@ -1,6 +1,6 @@
 import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { RouterLink, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { TopNavbarComponent } from '../../../layout/top-navbar/top-navbar.component';
 import { CompactFooterComponent } from '../../../layout/compact-footer/compact-footer.component';
@@ -12,6 +12,7 @@ export interface CartItem {
   productId: number;
   name: string;
   store: string;
+  storeId?: number;
   price: number;
   originalPrice?: number;
   quantity: number;
@@ -29,11 +30,7 @@ export interface CartItem {
 export class CartComponent implements OnInit {
   private cartService = inject(CartService);
   private cdr = inject(ChangeDetectorRef);
-
-  voucherCode = 'WARUNGADINS50';
-  discountAmount = 50000;
-  isVoucherApplied = true;
-  voucherMessage = '';
+  private router = inject(Router);
 
   items: CartItem[] = [];
   isLoading: boolean = false;
@@ -56,16 +53,12 @@ export class CartComponent implements OnInit {
           productId: item.productId,
           name: item.productName,
           store: item.storeName || 'Toko Tidak Diketahui',
+          storeId: item.storeId,
           price: item.totalPrice / item.quantity,
           quantity: item.quantity,
           image: this.defaultImage,
           selected: true
         }));
-
-        if (this.items.length === 0) {
-          this.isVoucherApplied = false;
-          this.voucherMessage = '';
-        }
 
         this.isLoading = false;
         this.cdr.detectChanges();
@@ -146,10 +139,6 @@ export class CartComponent implements OnInit {
       this.cartService.removeCartItem(id).subscribe({
         next: () => {
           this.items = this.items.filter(i => i.id !== id);
-          if (this.items.length === 0) {
-            this.isVoucherApplied = false;
-            this.voucherMessage = '';
-          }
         },
         error: (err) => {
           console.error('Gagal menghapus item', err);
@@ -165,8 +154,6 @@ export class CartComponent implements OnInit {
         this.cartService.removeCartItem(item.id).subscribe();
       });
       this.items = [];
-      this.isVoucherApplied = false;
-      this.voucherMessage = '';
     }
   }
 
@@ -179,34 +166,21 @@ export class CartComponent implements OnInit {
     return this.selectedItems.reduce((acc, curr) => acc + (curr.price * curr.quantity), 0);
   }
 
-  get activeDiscount(): number {
-    if (this.items.length === 0 || this.selectedItems.length === 0 || !this.isVoucherApplied) {
-      return 0;
-    }
-    return this.discountAmount;
-  }
-
-  // Diupdate: Hanya Subtotal - Diskon (Biaya layanan dihapus)
   get finalTotal(): number {
-    const total = this.subtotal - this.activeDiscount;
-    return Math.max(0, total);
+    return Math.max(0, this.subtotal);
   }
 
-  applyVoucher(): void {
-    if (this.items.length === 0) {
-      this.isVoucherApplied = false;
-      this.voucherMessage = 'Tambahkan minimal 1 barang ke keranjang sebelum memakai voucher.';
+  proceedToCheckout(): void {
+    if (this.selectedItems.length === 0) return;
+
+    // Validasi toko: pesanan diproses per toko
+    const uniqueStoreIds = Array.from(new Set(this.selectedItems.map(i => i.storeId).filter(Boolean)));
+    if (uniqueStoreIds.length > 1) {
+      alert('Untuk saat ini, proses checkout hanya dapat memproses produk dari 1 toko dalam satu transaksi. Silakan centang produk dari satu toko saja.');
       return;
     }
 
-    if (this.voucherCode.trim().toUpperCase() === 'WARUNGADINS50') {
-      this.isVoucherApplied = true;
-      this.discountAmount = 50000;
-      this.voucherMessage = '';
-    } else {
-      this.isVoucherApplied = false;
-      this.discountAmount = 0;
-      this.voucherMessage = 'Kode voucher tidak valid.';
-    }
+    this.cartService.setSelectedCartItemIds(this.selectedItems.map(i => i.id));
+    this.router.navigate(['/checkout']);
   }
 }
