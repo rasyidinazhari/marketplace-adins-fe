@@ -6,8 +6,9 @@ import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { Subject, catchError, of, switchMap } from 'rxjs';
 import { ModalComponent } from '../../../components/ui/modal/modal.component';
 import { StoreSummary } from '../../../models/product.model';
-import { SellerVoucher } from '../../../models/voucher.model';
+import { CreateVoucherPayload, SellerVoucher } from '../../../models/voucher.model';
 import { ProductService } from '../../../services/product/product.service';
+import { SellerStoreScopeService } from '../../../services/store/seller-store-scope.service';
 import { VoucherService } from '../../../services/voucher/voucher.service';
 
 @Component({
@@ -18,15 +19,16 @@ import { VoucherService } from '../../../services/voucher/voucher.service';
   styleUrl: './voucher.component.css',
 })
 export class VoucherComponent implements OnInit {
-  private readonly productService = inject(ProductService);
-  private readonly voucherService = inject(VoucherService);
-  private readonly destroyRef = inject(DestroyRef);
-  private readonly formBuilder = inject(FormBuilder);
-  private readonly voucherRequests = new Subject<number | null>();
+  private productService = inject(ProductService);
+  private voucherService = inject(VoucherService);
+  private destroyRef = inject(DestroyRef);
+  private formBuilder = inject(FormBuilder);
+  private dashboardStoreControl = inject(SellerStoreScopeService, { optional: true })?.storeControl;
+  private voucherRequests = new Subject<number | null>();
 
-  readonly maxVoucherAmount = 2147483647;
-  readonly storeControl = this.formBuilder.control<number | null>(null);
-  readonly voucherForm = this.formBuilder.group({
+  maxVoucherAmount = 2_147_483_647;
+  storeControl = this.formBuilder.control<number | null>(null);
+  voucherForm = this.formBuilder.group({
     code: this.formBuilder.nonNullable.control(''),
     discountPercentage: this.formBuilder.control<number | null>(null),
     minPurchaseAmount: this.formBuilder.control<number | null>(0),
@@ -75,11 +77,13 @@ export class VoucherComponent implements OnInit {
 
     this.isLoadingStores = true;
     this.storeLoadFailed = false;
-    this.productService.getSellerStores().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+    this.productService.getSellerStores().subscribe({
       next: stores => {
         this.stores = stores;
         this.isLoadingStores = false;
-        this.storeControl.setValue(stores.length === 1 ? stores[0].id : null);
+
+        const dashboardStore = stores.find(store => store.id === this.dashboardStoreControl?.value);
+        this.storeControl.setValue(dashboardStore?.id ?? (stores.length === 1 ? stores[0].id : null));
       },
       error: () => {
         this.isLoadingStores = false;
@@ -91,15 +95,19 @@ export class VoucherComponent implements OnInit {
   loadVouchers(): void {
     if (this.isSaving || this.isCreateModalOpen) return;
 
-    this.isLoadingVouchers = this.selectedStoreId !== null;
+    const storeId = this.selectedStoreId;
+    this.isLoadingVouchers = storeId !== null;
     this.voucherLoadFailed = false;
     this.actionError = '';
     this.vouchers = [];
-    this.voucherRequests.next(this.selectedStoreId);
+    this.voucherRequests.next(storeId);
   }
 
   get canManageVouchers(): boolean {
-    return this.selectedStoreId !== null && !this.isLoadingVouchers && !this.voucherLoadFailed && !this.isSaving;
+    return this.selectedStoreId !== null
+      && !this.isLoadingVouchers
+      && !this.voucherLoadFailed
+      && !this.isSaving;
   }
 
   get activeVoucherCount(): number {
@@ -118,36 +126,15 @@ export class VoucherComponent implements OnInit {
     const storeId = this.selectedStoreId;
     if (storeId === null || !this.canManageVouchers || !this.isCreateModalOpen) return;
 
-    const form = this.voucherForm.getRawValue();
-    const code = form.code.trim();
-    const { discountPercentage, minPurchaseAmount, maxDiscountAmount } = form;
     this.createError = '';
-
-    if (!code || code.length > 100) {
-      this.createError = 'Kode voucher wajib diisi dan maksimal 100 karakter.';
-      return;
-    }
-    if (discountPercentage === null || !Number.isInteger(discountPercentage)
-      || discountPercentage < 1 || discountPercentage > 100) {
-      this.createError = 'Diskon harus berupa bilangan bulat dari 1 sampai 100%.';
-      return;
-    }
-    if (minPurchaseAmount === null || !Number.isInteger(minPurchaseAmount)
-      || minPurchaseAmount < 0 || minPurchaseAmount > this.maxVoucherAmount) {
-      this.createError = 'Minimum belanja harus berupa bilangan bulat dari Rp 0 sampai Rp 2.147.483.647.';
-      return;
-    }
-    if (maxDiscountAmount === null || !Number.isInteger(maxDiscountAmount)
-      || maxDiscountAmount < 1 || maxDiscountAmount > this.maxVoucherAmount) {
-      this.createError = 'Maksimum potongan harus berupa bilangan bulat dari Rp 1 sampai Rp 2.147.483.647.';
-      return;
-    }
+    const payload = this.buildVoucherPayload();
+    if (!payload) return;
 
     this.isSaving = true;
     this.actionError = '';
-    this.voucherService.createVoucher(storeId, {
-      code, discountPercentage, minPurchaseAmount, maxDiscountAmount,
-    }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+    this.voucherService.createVoucher(storeId, payload).pipe(
+      takeUntilDestroyed(this.destroyRef),
+    ).subscribe({
       next: voucher => {
         this.vouchers = [voucher, ...this.vouchers];
         this.isSaving = false;
@@ -162,7 +149,7 @@ export class VoucherComponent implements OnInit {
   }
 
   toggleVoucherStatus(voucher: SellerVoucher): void {
-    if (!this.canManageVouchers || this.isCreateModalOpen || voucher.storeId !== this.selectedStoreId) return;
+    if (!this.canModifyVoucher(voucher)) return;
 
     this.isSaving = true;
     this.actionError = '';
@@ -181,7 +168,7 @@ export class VoucherComponent implements OnInit {
   }
 
   deleteVoucher(voucher: SellerVoucher): void {
-    if (!this.canManageVouchers || this.isCreateModalOpen || voucher.storeId !== this.selectedStoreId) return;
+    if (!this.canModifyVoucher(voucher)) return;
     if (!confirm(`Hapus voucher "${voucher.code}" dari toko?`)) return;
 
     this.isSaving = true;
@@ -198,6 +185,40 @@ export class VoucherComponent implements OnInit {
         this.actionError = this.getActionError(error, 'Gagal menghapus voucher. Coba lagi.');
       },
     });
+  }
+
+  private buildVoucherPayload(): CreateVoucherPayload | null {
+    const form = this.voucherForm.getRawValue();
+    const code = form.code.trim();
+    const { discountPercentage, minPurchaseAmount, maxDiscountAmount } = form;
+
+    if (!code || code.length > 100) {
+      return this.invalidForm('Kode voucher wajib diisi dan maksimal 100 karakter.');
+    }
+    if (!this.isIntegerInRange(discountPercentage, 1, 100)) {
+      return this.invalidForm('Diskon harus berupa bilangan bulat dari 1 sampai 100%.');
+    }
+    if (!this.isIntegerInRange(minPurchaseAmount, 0, this.maxVoucherAmount)) {
+      return this.invalidForm('Minimum belanja harus berupa bilangan bulat dari Rp 0 sampai Rp 2.147.483.647.');
+    }
+    if (!this.isIntegerInRange(maxDiscountAmount, 1, this.maxVoucherAmount)) {
+      return this.invalidForm('Maksimum potongan harus berupa bilangan bulat dari Rp 1 sampai Rp 2.147.483.647.');
+    }
+
+    return { code, discountPercentage, minPurchaseAmount, maxDiscountAmount };
+  }
+
+  private isIntegerInRange(value: number | null, min: number, max: number): value is number {
+    return value !== null && Number.isInteger(value) && value >= min && value <= max;
+  }
+
+  private invalidForm(message: string): null {
+    this.createError = message;
+    return null;
+  }
+
+  private canModifyVoucher(voucher: SellerVoucher): boolean {
+    return this.canManageVouchers && !this.isCreateModalOpen && voucher.storeId === this.selectedStoreId;
   }
 
   private getActionError(error: HttpErrorResponse, fallback: string): string {

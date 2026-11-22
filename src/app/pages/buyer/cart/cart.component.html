@@ -13,11 +13,7 @@
     <div>
       <h1 class="text-2xl font-bold tracking-tight text-zinc-950">Keranjang Belanja</h1>
       <p class="text-xs text-zinc-500 mt-1">
-        @if (items.length > 0) {
-          Kelola barang pilihan Anda sebelum melanjutkan ke pembayaran.
-        } @else {
-          Keranjang Anda saat ini belum memiliki barang untuk diproses.
-        }
+        Pilih semua barang dari satu toko untuk melanjutkan checkout.
       </p>
     </div>
     <span class="rounded-full bg-zinc-100 px-3 py-1 text-xs font-semibold text-zinc-700 border border-zinc-200">
@@ -25,7 +21,9 @@
     </span>
   </div>
 
-  @if (errorMessage) {
+  @if (isLoading) {
+    <p role="status" class="py-24 text-center text-sm text-zinc-500">Memuat keranjang...</p>
+  } @else if (errorMessage) {
     <div class="text-center py-16 rounded-2xl border border-red-200 bg-red-50 p-8 space-y-3">
       <p class="text-sm font-medium text-red-700">{{ errorMessage }}</p>
       <button (click)="loadCart()"
@@ -55,7 +53,7 @@
         </div>
 
         <!-- LOOPING PER TOKO -->
-        @for (group of groupedItems; track group.storeName) {
+        @for (group of groupedItems; track group.storeId) {
           <div class="rounded-xl border border-zinc-200/80 bg-white shadow-2xs overflow-hidden">
 
             <!-- Header Toko -->
@@ -141,24 +139,24 @@
             Ringkasan Belanja
           </h2>
 
-          <!-- Price Breakdown -->
-          <div class="space-y-2 text-xs text-zinc-600">
+          <p class="text-xs text-zinc-600">Voucher toko bisa dipilih saat checkout.</p>
+
+          <div class="space-y-2 text-xs text-zinc-600 pt-2 border-t border-zinc-100">
             <div class="flex justify-between">
               <span>Total Harga ({{ selectedItems.length }} barang)</span>
               <span class="font-medium text-zinc-900">Rp {{ subtotal | number:'1.0-0' }}</span>
             </div>
           </div>
 
-          <!-- Total Due -->
           <div class="pt-4 border-t border-zinc-200 flex items-baseline justify-between">
             <span class="text-sm font-semibold text-zinc-950">Total Tagihan</span>
             <span class="text-lg font-extrabold text-zinc-950">
-              Rp {{ finalTotal | number:'1.0-0' }}
+              Rp {{ subtotal | number:'1.0-0' }}
             </span>
           </div>
 
           <!-- Checkout CTA button -->
-          <button (click)="proceedToCheckout()"
+          <button type="button" (click)="proceedToCheckout()"
                   [disabled]="selectedItems.length === 0"
                   class="w-full inline-flex items-center justify-center gap-2 rounded-md bg-zinc-900 px-4 py-2.5 text-sm font-medium text-zinc-50 shadow-sm hover:bg-zinc-800 transition-colors text-center disabled:opacity-50 disabled:pointer-events-none cursor-pointer">
             <span>Lanjut ke Pembayaran</span>

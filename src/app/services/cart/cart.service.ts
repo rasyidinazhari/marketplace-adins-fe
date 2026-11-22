@@ -51,40 +51,4 @@ export class CartService {
     // kita set tipe return-nya menjadi Observable<void>
     return this.http.delete<void>(`${this.apiCartUrl}/items/${cartId}`);
   }
-
-  private selectedCartItemIds: number[] = [];
-
-  setSelectedCartItemIds(ids: number[]): void {
-    this.selectedCartItemIds = [...ids];
-    try {
-      sessionStorage.setItem('selectedCartItemIds', JSON.stringify(ids));
-    } catch {
-      // ignore storage error
-    }
-  }
-
-  getSelectedCartItemIds(): number[] {
-    if (this.selectedCartItemIds.length > 0) {
-      return this.selectedCartItemIds;
-    }
-    try {
-      const stored = sessionStorage.getItem('selectedCartItemIds');
-      if (stored) {
-        this.selectedCartItemIds = JSON.parse(stored);
-        return this.selectedCartItemIds;
-      }
-    } catch {
-      // ignore storage error
-    }
-    return [];
-  }
-
-  clearSelectedCartItemIds(): void {
-    this.selectedCartItemIds = [];
-    try {
-      sessionStorage.removeItem('selectedCartItemIds');
-    } catch {
-      // ignore storage error
-    }
-  }
 }

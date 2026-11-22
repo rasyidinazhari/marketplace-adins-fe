@@ -3,9 +3,10 @@ import { Component, DestroyRef, OnInit, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { Observable, Subject, catchError, of, switchMap, timer } from 'rxjs';
+import { Observable, Subject, catchError, distinctUntilChanged, of, switchMap, timer } from 'rxjs';
 import { CategoryItem, SellerProduct } from '../../../models/product.model';
 import { ProductService } from '../../../services/product/product.service';
+import { SellerStoreScopeService } from '../../../services/store/seller-store-scope.service';
 
 @Component({
   selector: 'app-product-list',
@@ -15,12 +16,13 @@ import { ProductService } from '../../../services/product/product.service';
   styleUrl: './product-list.component.css',
 })
 export class ProductListComponent implements OnInit {
-  private readonly productService = inject(ProductService);
-  private readonly destroyRef = inject(DestroyRef);
-  private readonly productRequests = new Subject<number>();
-  private readonly categoryNames = new Map<number, string>();
-  private readonly pageSize = 20;
-  private readonly searchDebounceMs = 300;
+  private productService = inject(ProductService);
+  private destroyRef = inject(DestroyRef);
+  private storeControl = inject(SellerStoreScopeService, { optional: true })?.storeControl;
+  private productRequests = new Subject<number>();
+  private categoryNames = new Map<number, string>();
+  private pageSize = 20;
+  private searchDebounceMs = 300;
 
   searchQuery = '';
   selectedCategoryId = 0;
@@ -37,20 +39,7 @@ export class ProductListComponent implements OnInit {
   ngOnInit(): void {
     this.productRequests.pipe(
       // A new load cancels both the pending delay and the in-flight request.
-      switchMap(delayMs => {
-        const { searchQuery, page, selectedCategoryId } = this;
-        const requestStart$: Observable<unknown> = delayMs > 0 ? timer(delayMs) : of(undefined);
-
-        return requestStart$.pipe(
-          switchMap(() => this.productService.getSellerProducts(
-            searchQuery,
-            page,
-            this.pageSize,
-            selectedCategoryId,
-          )),
-          catchError(() => of(null)),
-        );
-      }),
+      switchMap(delayMs => this.fetchProducts(delayMs)),
       takeUntilDestroyed(this.destroyRef),
     ).subscribe(products => {
       const hasValidResponse = Array.isArray(products);
@@ -58,6 +47,11 @@ export class ProductListComponent implements OnInit {
       this.productLoadFailed = !hasValidResponse;
       this.products = hasValidResponse ? products : [];
     });
+
+    this.storeControl?.valueChanges.pipe(
+      distinctUntilChanged(),
+      takeUntilDestroyed(this.destroyRef),
+    ).subscribe(() => this.loadProducts());
 
     this.loadCategories();
     this.loadProducts();
@@ -84,9 +78,7 @@ export class ProductListComponent implements OnInit {
   loadCategories(): void {
     this.isLoadingCategories = true;
     this.categoryLoadFailed = false;
-    this.productService.getCategories().pipe(
-      takeUntilDestroyed(this.destroyRef),
-    ).subscribe({
+    this.productService.getCategories().subscribe({
       next: categories => {
         this.categories = categories;
         for (const category of categories) {
@@ -102,23 +94,17 @@ export class ProductListComponent implements OnInit {
   }
 
   deleteProduct(product: SellerProduct): void {
-    if (this.deletingProductId !== null || !confirm(`Hapus "${product.productName || 'produk ini'}" dari toko?`)) {
-      return;
-    }
+    if (this.deletingProductId !== null) return;
+
+    const productName = product.productName || 'produk ini';
+    if (!confirm(`Hapus "${productName}" dari toko?`)) return;
 
     this.deletingProductId = product.id;
     this.deleteErrorMessage = '';
     this.productService.deleteProduct(product.id).pipe(
       takeUntilDestroyed(this.destroyRef),
     ).subscribe({
-      next: () => {
-        const wasOnlyProductOnPage = !this.isLoading
-          && this.products.length === 1
-          && this.products[0].id === product.id;
-        this.products = this.products.filter(row => row.id !== product.id);
-        this.deletingProductId = null;
-        this.loadProducts(wasOnlyProductOnPage ? Math.max(1, this.page - 1) : this.page);
-      },
+      next: () => this.refreshAfterDelete(product.id),
       error: () => {
         this.deletingProductId = null;
         this.deleteErrorMessage = 'Gagal menghapus produk. Coba lagi atau muat ulang daftar.';
@@ -138,6 +124,34 @@ export class ProductListComponent implements OnInit {
   }
 
   get hasFilters(): boolean {
-    return this.searchQuery.trim().length > 0 || this.selectedCategoryId !== 0;
+    return this.searchQuery.trim().length > 0 || this.selectedCategoryId !== 0 || this.storeControl?.value != null;
+  }
+
+  private fetchProducts(delayMs: number): Observable<SellerProduct[] | null> {
+    const { searchQuery, page, selectedCategoryId } = this;
+    const storeId = this.storeControl?.value ?? null;
+    const requestStart$: Observable<unknown> = delayMs > 0 ? timer(delayMs) : of(undefined);
+
+    return requestStart$.pipe(
+      switchMap(() => this.productService.getSellerProducts(
+        searchQuery,
+        page,
+        this.pageSize,
+        selectedCategoryId,
+        storeId,
+      )),
+      catchError(() => of(null)),
+    );
+  }
+
+  private refreshAfterDelete(productId: number): void {
+    const removedOnlyProductOnPage = !this.isLoading
+      && this.products.length === 1
+      && this.products[0].id === productId;
+    const pageToReload = removedOnlyProductOnPage ? Math.max(1, this.page - 1) : this.page;
+
+    this.products = this.products.filter(product => product.id !== productId);
+    this.deletingProductId = null;
+    this.loadProducts(pageToReload);
   }
 }

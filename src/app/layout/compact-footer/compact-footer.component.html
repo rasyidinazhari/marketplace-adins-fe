@@ -17,6 +17,7 @@
     <!-- Right: Quick Links & System Status -->
     <div class="flex items-center gap-4 text-xs flex-wrap justify-center">
       <a
+        *ngIf="showCatalogLink"
         [routerLink]="'/products'"
         class="hover:text-zinc-950 transition-colors"
         >Katalog</a

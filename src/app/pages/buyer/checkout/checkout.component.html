@@ -136,93 +136,84 @@
 
       <!-- 4. Ringkasan Produk dalam Pesanan -->
       <div class="rounded-xl border border-zinc-200/80 bg-white p-6 shadow-2xs space-y-4">
-        <div class="flex items-center justify-between pb-3 border-b border-zinc-100">
-          <div class="flex items-center gap-2">
-            <span class="flex h-5 w-5 items-center justify-center rounded-full bg-zinc-900 text-[10px] font-bold text-white">4</span>
-            <h2 class="text-sm font-semibold text-zinc-950">Rincian Barang yang Dipesan</h2>
-          </div>
-          @if (currentStoreName) {
-            <span class="inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-700 bg-zinc-100 px-2.5 py-1 rounded-md">
-              <svg class="w-3.5 h-3.5 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
-              <span>{{ currentStoreName }}</span>
-            </span>
-          }
-        </div>
+        <h2 class="text-sm font-semibold text-zinc-950 pb-3 border-b border-zinc-100">
+          Rincian Barang yang Dipesan
+        </h2>
         
         @if (isLoadingCart) {
           <div class="text-center py-8 text-sm text-zinc-500">Memuat data keranjang...</div>
         } @else if (orderItems.length === 0) {
-          <div class="text-center py-8 text-sm text-zinc-500">Keranjang Anda kosong.</div>
+          <p role="status" class="text-sm text-zinc-600">{{ cartMessage }}</p>
+          <a routerLink="/cart" class="text-xs font-medium text-zinc-900 underline">Kembali ke keranjang</a>
         } @else {
+          <p class="text-xs font-semibold text-zinc-800">{{ currentStoreName }}</p>
           <div class="space-y-3">
-            @for (item of orderItems; track item.productId) {
+            @for (item of orderItems; track item.id) {
               <div class="flex items-center justify-between gap-4 py-2 border-b border-zinc-50 last:border-0">
                 <div class="flex items-center gap-3 min-w-0">
                   <img [src]="item.image" [alt]="item.name" class="w-12 h-12 rounded-md object-cover bg-zinc-100 border border-zinc-200/60" />
                   <div class="truncate">
                     <div class="text-xs font-medium text-zinc-900 truncate">{{ item.name }}</div>
-                    <div class="text-[11px] text-zinc-500">{{ item.qty }}x • Rp {{ item.price | number:'1.0-0' }}</div>
+                    <div class="text-[11px] text-zinc-500">
+                      {{ item.qty }}x
+                      @if (item.currentTotalPrice !== null) {
+                        · Rp {{ item.currentTotalPrice / item.qty | number:'1.0-2' }}
+                      }
+                    </div>
                   </div>
                 </div>
                 <div class="text-xs font-bold text-zinc-950 whitespace-nowrap">
-                  Rp {{ (item.price * item.qty) | number:'1.0-0' }}
+                  @if (item.currentTotalPrice !== null) {
+                    Rp {{ item.currentTotalPrice | number:'1.0-2' }}
+                  } @else {
+                    Harga belum tersedia
+                  }
                 </div>
               </div>
             }
           </div>
-
-          <!-- Section Pilihan Voucher Toko -->
-          <div class="pt-3 border-t border-zinc-100">
-            <div class="flex items-center justify-between p-3.5 rounded-lg border border-zinc-200/80 bg-zinc-50/70">
-              @if (!selectedVoucher) {
-                <div class="flex items-center gap-2.5">
-                  <div class="w-8 h-8 rounded-lg bg-zinc-200/70 text-zinc-700 flex items-center justify-center shrink-0">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
-                  </div>
-                  <div>
-                    <div class="text-xs font-semibold text-zinc-900">Voucher Toko</div>
-                    <div class="text-[11px] text-zinc-500">
-                      {{ availableVouchers.length > 0 ? availableVouchers.length + ' voucher tersedia dari toko ini' : 'Gunakan voucher toko untuk hemat belanja' }}
-                    </div>
-                  </div>
-                </div>
-                <button type="button" 
-                        (click)="openVoucherModal()"
-                        [disabled]="isLoadingVouchers || orderItems.length === 0"
-                        class="px-3.5 py-1.5 rounded-md border border-zinc-300 bg-white text-zinc-900 text-xs font-semibold hover:bg-zinc-100 transition-colors shadow-2xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
-                  {{ isLoadingVouchers ? 'Memuat...' : 'Pilih Voucher' }}
+          @if (canChooseVoucher) {
+            <div class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-zinc-200 bg-zinc-50 p-3.5 text-xs">
+              <div>
+                <p class="font-semibold text-zinc-900">Voucher Toko</p>
+                @if (selectedVoucher; as voucher) {
+                  <p class="mt-1 font-medium text-emerald-700">
+                    {{ voucher.code }} · Hemat Rp {{ voucher.discountInCents / 100 | number:'1.0-2' }}
+                  </p>
+                } @else if (isLoadingVouchers) {
+                  <p role="status" class="mt-1 text-zinc-600">Memuat voucher toko...</p>
+                } @else if (voucherLoadFailed) {
+                  <p role="alert" class="mt-1 text-red-700">Gagal memuat voucher. Anda bisa lanjut tanpa voucher.</p>
+                } @else if (voucherOptions.length === 0) {
+                  <p class="mt-1 text-zinc-600">Belum ada voucher aktif di toko ini.</p>
+                }
+              </div>
+              @if (voucherLoadFailed) {
+                <button type="button" (click)="loadVouchers()" [disabled]="isProcessing"
+                        class="font-semibold text-zinc-900 underline disabled:opacity-50">
+                  Coba muat ulang voucher
                 </button>
-              } @else {
-                <div class="flex items-center gap-2.5 min-w-0">
-                  <div class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
-                  </div>
-                  <div class="truncate">
-                    <div class="flex items-center gap-1.5 flex-wrap">
-                      <span class="font-mono text-xs font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200/60">{{ selectedVoucher.code }}</span>
-                      <span class="text-xs font-semibold text-zinc-900">Diskon {{ selectedVoucher.discountPercentage }}%</span>
-                    </div>
-                    <div class="text-[11px] text-emerald-600 font-medium">
-                      Hemat Rp {{ voucherDiscount | number:'1.0-0' }} (Maks. Rp {{ selectedVoucher.maxDiscountAmount | number:'1.0-0' }})
-                    </div>
-                  </div>
-                </div>
-                <div class="flex items-center gap-2 shrink-0">
-                  <button type="button" 
-                          (click)="openVoucherModal()"
-                          class="text-xs font-semibold text-zinc-700 hover:text-zinc-950 underline underline-offset-2 cursor-pointer">
-                    Ganti
+              } @else if (voucherOptions.length > 0) {
+                <div class="flex items-center gap-3">
+                  <button type="button" (click)="isVoucherModalOpen = true" [disabled]="isProcessing"
+                          class="rounded-md border border-zinc-300 bg-white px-3 py-1.5 font-semibold text-zinc-900 hover:bg-zinc-100 disabled:opacity-50">
+                    {{ selectedVoucher ? 'Ganti Voucher' : 'Pilih Voucher' }}
                   </button>
-                  <button type="button" 
-                          (click)="removeVoucher()"
-                          class="p-1.5 rounded-md text-zinc-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
-                          title="Hapus Voucher">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                  </button>
+                  @if (selectedVoucher) {
+                    <button type="button" (click)="removeVoucher()" [disabled]="isProcessing"
+                            class="font-semibold text-red-700 underline disabled:opacity-50">
+                      Lepas Voucher
+                    </button>
+                  }
                 </div>
               }
             </div>
-          </div>
+          } @else {
+            <p role="alert" class="text-xs text-red-700">Harga terbaru barang perlu tersedia sebelum checkout.</p>
+            <button type="button" (click)="loadCartData()" class="text-xs font-medium text-zinc-900 underline">
+              Muat ulang keranjang
+            </button>
+          }
         }
       </div>
 
@@ -235,31 +226,30 @@
           Ringkasan Tagihan
         </h2>
 
-        <div class="space-y-2 text-xs text-zinc-600">
-          <div class="flex justify-between">
-            <span>Subtotal Produk ({{ orderItems.length }} Barang)</span>
-            <span class="font-medium text-zinc-900">Rp {{ subtotal | number:'1.0-0' }}</span>
-          </div>
-          @if (voucherDiscount > 0) {
-            <div class="flex justify-between text-emerald-600">
-              <span class="flex items-center gap-1.5">
-                <span>Diskon Voucher</span>
-                <span class="font-mono text-[10px] bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 text-emerald-700 font-semibold">{{ selectedVoucher?.code }}</span>
-              </span>
-              <span class="font-semibold">- Rp {{ voucherDiscount | number:'1.0-0' }}</span>
+        @if (canChooseVoucher) {
+          <div class="space-y-2 text-xs text-zinc-600">
+            <div class="flex justify-between">
+              <span>Subtotal Produk ({{ orderItems.length }} Barang)</span>
+              <span class="font-medium text-zinc-900">Rp {{ subtotal | number:'1.0-2' }}</span>
             </div>
-          }
-        </div>
+            @if (selectedVoucher; as voucher) {
+              <div class="flex justify-between gap-2 text-emerald-700">
+                <span>Voucher {{ voucher.code }}</span>
+                <span class="whitespace-nowrap font-medium">− Rp {{ voucher.discountInCents / 100 | number:'1.0-2' }}</span>
+              </div>
+            }
+          </div>
 
-        <div class="pt-4 border-t border-zinc-200 flex items-baseline justify-between">
-          <span class="text-sm font-semibold text-zinc-950">Total Pembayaran</span>
-          <span class="text-xl font-extrabold text-zinc-950">
-            Rp {{ grandTotal | number:'1.0-0' }}
-          </span>
-        </div>
+          <div class="pt-4 border-t border-zinc-200 flex items-baseline justify-between">
+            <span class="text-sm font-semibold text-zinc-950">Estimasi Total</span>
+            <span class="text-xl font-extrabold text-zinc-950">
+              Rp {{ grandTotal | number:'1.0-2' }}
+            </span>
+          </div>
+        }
 
-        <button (click)="processPayment()" 
-                [disabled]="isProcessing || isLoadingCart || orderItems.length === 0"
+        <button type="button" (click)="processPayment()"
+                [disabled]="!canPay"
                 class="w-full inline-flex items-center justify-center gap-2 rounded-md bg-zinc-900 px-4 py-3 text-sm font-semibold text-zinc-50 shadow-sm hover:bg-zinc-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
           <span *ngIf="!isProcessing">Bayar Sekarang</span>
           <span *ngIf="isProcessing" class="flex items-center gap-2">
@@ -491,118 +481,36 @@
 
 </app-modal>
 
-<!-- Modal Pilih Voucher Toko -->
-<app-modal 
+<app-modal
   [(isOpen)]="isVoucherModalOpen"
-  [title]="'Voucher Toko ' + (currentStoreName ? currentStoreName : '')"
-  description="Pilih voucher dari toko ini untuk mendapatkan potongan harga belanja. Maksimal 1 voucher per pesanan."
-  size="lg">
-
-  <div class="space-y-4">
-    @if (isLoadingVouchers) {
-      <div class="py-12 text-center text-xs text-zinc-500 flex flex-col items-center justify-center gap-2">
-        <svg class="animate-spin h-5 w-5 text-zinc-600" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-        <span>Memuat voucher toko...</span>
-      </div>
-    } @else if (availableVouchers.length === 0) {
-      <div class="py-10 text-center space-y-2 border border-dashed border-zinc-200 rounded-xl bg-zinc-50/50">
-        <div class="w-10 h-10 rounded-full bg-zinc-100 text-zinc-400 mx-auto flex items-center justify-center">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z"/></svg>
-        </div>
-        <div class="text-xs font-semibold text-zinc-800">Belum Ada Voucher Toko</div>
-        <p class="text-[11px] text-zinc-500 max-w-xs mx-auto">
-          Toko ini belum memiliki voucher promo yang aktif saat ini.
-        </p>
-      </div>
-    } @else {
-      <!-- List Vouchers Toko -->
-      <div class="space-y-3 max-h-[55vh] overflow-y-auto pr-1">
-        @for (voucher of availableVouchers; track voucher.id) {
-          <div class="relative rounded-xl border p-4 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4"
-               [class.border-emerald-500]="selectedVoucher?.id === voucher.id"
-               [class.bg-emerald-50]="selectedVoucher?.id === voucher.id"
-               [class.border-zinc-200]="selectedVoucher?.id !== voucher.id && isVoucherEligible(voucher)"
-               [class.bg-white]="selectedVoucher?.id !== voucher.id && isVoucherEligible(voucher)"
-               [class.border-zinc-300]="!isVoucherEligible(voucher)"
-               [class.bg-zinc-50]="!isVoucherEligible(voucher)">
-
-            <!-- Detail Voucher -->
-            <div class="space-y-1.5 flex-1 min-w-0">
-              <div class="flex items-center gap-2 flex-wrap">
-                <span class="font-mono text-xs font-bold px-2.5 py-1 rounded-md border tracking-wide transition-colors"
-                      [ngClass]="{
-                        'bg-zinc-900 !text-white border-zinc-900': isVoucherEligible(voucher) && selectedVoucher?.id !== voucher.id,
-                        'bg-emerald-600 !text-white border-emerald-600': selectedVoucher?.id === voucher.id,
-                        'bg-zinc-200 text-zinc-500 border-zinc-300': !isVoucherEligible(voucher)
-                      }"
-                      [style.color]="isVoucherEligible(voucher) || selectedVoucher?.id === voucher.id ? '#ffffff' : null">
-                  {{ voucher.code }}
-                </span>
-                <span class="text-xs font-bold text-zinc-900">
-                  Diskon {{ voucher.discountPercentage }}%
-                </span>
-                @if (selectedVoucher?.id === voucher.id) {
-                  <span class="text-[10px] font-semibold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full border border-emerald-300">
-                    Sedang Dipakai
-                  </span>
-                }
-              </div>
-
-              <div class="text-xs text-zinc-600 space-y-0.5">
-                <div>Min. Belanja: <span class="font-semibold text-zinc-900">Rp {{ voucher.minPurchaseAmount | number:'1.0-0' }}</span></div>
-                <div>Maks. Potongan: <span class="font-semibold text-zinc-900">Rp {{ voucher.maxDiscountAmount | number:'1.0-0' }}</span></div>
-              </div>
-
-              @if (!isVoucherEligible(voucher)) {
-                <div class="text-[11px] text-amber-700 font-medium flex items-center gap-1 pt-0.5">
-                  <svg class="w-3.5 h-3.5 text-amber-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-                  <span>Belum memenuhi syarat (Kurang Rp {{ (voucher.minPurchaseAmount - subtotal) | number:'1.0-0' }})</span>
-                </div>
-              }
-            </div>
-
-            <!-- Tombol Aksi Gunakan / Lepas -->
-            <div class="shrink-0 flex items-center gap-2">
-              @if (selectedVoucher?.id === voucher.id) {
-                <button type="button"
-                        (click)="removeVoucher()"
-                        class="px-4 py-2 rounded-md border border-red-200 bg-red-50 text-red-600 text-xs font-semibold hover:bg-red-100 transition-colors cursor-pointer">
-                  Lepas Voucher
-                </button>
-              } @else {
-                <button type="button"
-                        (click)="applyVoucher(voucher)"
-                        [disabled]="!isVoucherEligible(voucher)"
-                        class="px-4 py-2 rounded-md text-xs font-semibold transition-all shadow-2xs"
-                        [class.bg-zinc-900]="isVoucherEligible(voucher)"
-                        [class.text-white]="isVoucherEligible(voucher)"
-                        [class.hover:bg-zinc-800]="isVoucherEligible(voucher)"
-                        [class.cursor-pointer]="isVoucherEligible(voucher)"
-                        [class.bg-zinc-200]="!isVoucherEligible(voucher)"
-                        [class.text-zinc-400]="!isVoucherEligible(voucher)"
-                        [class.cursor-not-allowed]="!isVoucherEligible(voucher)">
-                  Gunakan
-                </button>
-              }
-            </div>
-
+  [title]="currentStoreName ? 'Voucher Toko ' + currentStoreName : 'Voucher Toko'"
+  description="Pilih satu voucher untuk pesanan ini."
+  size="lg"
+>
+  <div class="space-y-3">
+    @for (voucher of voucherOptions; track voucher.id) {
+      <div class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-zinc-200 p-4"
+           [class.bg-zinc-50]="voucher.shortfallInCents > 0">
+        <div class="space-y-1 text-xs text-zinc-700">
+          <div class="flex items-center gap-2">
+            <span class="break-all rounded border border-zinc-200 bg-white px-2 py-1 font-mono font-semibold text-zinc-900">{{ voucher.code }}</span>
+            <span class="font-semibold">Diskon {{ voucher.discountPercentage }}%</span>
           </div>
-        }
+          <p>Min. belanja Rp {{ voucher.minPurchaseAmount | number:'1.0-2' }} · Maks. potongan Rp {{ voucher.maxDiscountAmount | number:'1.0-2' }}</p>
+          @if (voucher.shortfallInCents > 0) {
+            <p class="font-medium text-amber-800">Tambah Rp {{ voucher.shortfallInCents / 100 | number:'1.0-2' }} lagi</p>
+          } @else {
+            <p class="font-semibold text-emerald-700">Hemat Rp {{ voucher.discountInCents / 100 | number:'1.0-2' }}</p>
+          }
+        </div>
+        <button type="button" (click)="applyVoucher(voucher)"
+                [disabled]="isProcessing || voucher.shortfallInCents > 0 || selectedVoucher?.id === voucher.id"
+                class="rounded-md bg-zinc-900 px-4 py-2 text-xs font-semibold text-white hover:bg-zinc-800 disabled:opacity-50">
+          {{ selectedVoucher?.id === voucher.id ? 'Dipakai' : 'Gunakan' }}
+        </button>
       </div>
     }
   </div>
-
-  <!-- Modal Footer Slot -->
-  <div modal-footer class="flex items-center justify-between pt-4 border-t border-zinc-100 mt-2 w-full">
-    <span class="text-[11px] text-zinc-500">Maksimal 1 voucher per transaksi.</span>
-    <button 
-      type="button" 
-      (click)="closeVoucherModal()" 
-      class="px-4 py-2 rounded-md border border-zinc-200 bg-white text-xs font-semibold text-zinc-700 hover:bg-zinc-50 transition-colors shadow-2xs cursor-pointer">
-      Tutup
-    </button>
-  </div>
-
 </app-modal>
 
 <app-compact-footer></app-compact-footer>

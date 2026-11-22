@@ -39,6 +39,7 @@ describe('TopNavbarComponent', () => {
     navbar.querySelector<HTMLButtonElement>('button[aria-label="Menu navigasi"]')!.click();
     fixture.detectChanges();
 
+    expect(countLinks('/')).toBe(3);
     expect(countLinks('/products')).toBe(2);
     expect(countLinks('/buyer/login')).toBe(1);
     expect(countLinks('/register')).toBe(1);
@@ -50,21 +51,29 @@ describe('TopNavbarComponent', () => {
     role = 'Buyer';
     fixture.detectChanges();
 
+    expect(countLinks('/')).toBe(3);
     expect(countLinks('/products')).toBe(2);
     expect(countLinks('/buyer/login')).toBe(0);
     expect(countLinks('/register')).toBe(0);
     expect(countLinks('/cart')).toBe(2);
-    expect(countLinks('/buyer/orders')).toBe(2);
+    expect(countLinks('/buyer/orders')).toBe(1);
+    const ordersLink = navbar.querySelector('#navbar-account-panel > a[href="/buyer/orders"]');
+    expect(ordersLink?.textContent).toContain('Pesanan Saya');
+    const divider = ordersLink?.nextElementSibling;
+    expect(divider?.tagName).toBe('HR');
+    expect(divider?.nextElementSibling?.textContent).toContain('Keluar');
     expect(countLinks('/seller/products')).toBe(0);
     expect(accountButton()?.textContent).toContain('Dina');
 
     role = 'Seller';
     fixture.detectChanges();
 
+    expect(countLinks('/')).toBe(0);
     expect(countLinks('/products')).toBe(0);
     expect(countLinks('/cart')).toBe(0);
     expect(countLinks('/buyer/orders')).toBe(0);
-    expect(countLinks('/seller/products')).toBe(2);
+    expect(countLinks('/seller/products')).toBe(3);
+    expect(navbar.querySelector('a[aria-label="WarungAdins, Area Penjual"]')?.getAttribute('href')).toBe('/seller/products');
     expect(countLinks('/seller/orders')).toBe(2);
     expect(countLinks('/seller/vouchers')).toBe(2);
     expect(navbar.querySelector('input')).toBeNull();

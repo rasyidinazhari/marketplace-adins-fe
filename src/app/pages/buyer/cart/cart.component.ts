@@ -12,7 +12,7 @@ export interface CartItem {
   productId: number;
   name: string;
   store: string;
-  storeId?: number;
+  storeId: number;
   price: number;
   originalPrice?: number;
   quantity: number;
@@ -48,7 +48,7 @@ export class CartComponent implements OnInit {
 
     this.cartService.getCartItems().subscribe({
       next: (response: CartItemResponse[]) => {
-        this.items = response.map(item => ({
+        this.items = (response ?? []).map(item => ({
           id: item.id,
           productId: item.productId,
           name: item.productName,
@@ -74,19 +74,13 @@ export class CartComponent implements OnInit {
 
   // --- GETTER UNTUK GROUPING TOKO ---
   get groupedItems() {
-    const groups: { [key: string]: CartItem[] } = {};
-
-    this.items.forEach(item => {
-      if (!groups[item.store]) {
-        groups[item.store] = [];
-      }
-      groups[item.store].push(item);
-    });
-
-    return Object.keys(groups).map(storeName => ({
-      storeName: storeName,
-      items: groups[storeName]
-    }));
+    const groups = new Map<number, { storeId: number; storeName: string; items: CartItem[] }>();
+    for (const item of this.items) {
+      const group = groups.get(item.storeId) ?? { storeId: item.storeId, storeName: item.store, items: [] };
+      group.items.push(item);
+      groups.set(item.storeId, group);
+    }
+    return [...groups.values()];
   }
 
   isAllStoreSelected(storeItems: CartItem[]): boolean {
@@ -165,22 +159,17 @@ export class CartComponent implements OnInit {
   get subtotal(): number {
     return this.selectedItems.reduce((acc, curr) => acc + (curr.price * curr.quantity), 0);
   }
-
-  get finalTotal(): number {
-    return Math.max(0, this.subtotal);
-  }
-
   proceedToCheckout(): void {
-    if (this.selectedItems.length === 0) return;
+    const selected = this.selectedItems;
+    if (selected.length === 0) return;
 
-    // Validasi toko: pesanan diproses per toko
-    const uniqueStoreIds = Array.from(new Set(this.selectedItems.map(i => i.storeId).filter(Boolean)));
-    if (uniqueStoreIds.length > 1) {
-      alert('Untuk saat ini, proses checkout hanya dapat memproses produk dari 1 toko dalam satu transaksi. Silakan centang produk dari satu toko saja.');
+    const storeId = selected[0].storeId;
+    if (storeId <= 0 || selected.some(item => item.storeId !== storeId)
+      || this.items.some(item => item.storeId === storeId && !item.selected)) {
+      alert('Pilih semua barang dari satu toko untuk melanjutkan checkout.');
       return;
     }
 
-    this.cartService.setSelectedCartItemIds(this.selectedItems.map(i => i.id));
-    this.router.navigate(['/checkout']);
+    this.router.navigate(['/checkout'], { queryParams: { storeId } });
   }
 }
