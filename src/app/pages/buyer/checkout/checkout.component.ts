@@ -1,7 +1,8 @@
-import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
+import { Component, DestroyRef, OnInit, inject, ChangeDetectorRef } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
-import { RouterLink, Router } from '@angular/router';
-import { FormControl, FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { ActivatedRoute, RouterLink, Router } from '@angular/router';
+import { FormsModule } from '@angular/forms';
 import { TopNavbarComponent } from '../../../layout/top-navbar/top-navbar.component';
 import { CompactFooterComponent } from '../../../layout/compact-footer/compact-footer.component';
 import { ModalComponent } from '../../../components/ui/modal/modal.component';
@@ -28,18 +29,14 @@ export interface AddressItem {
 }
 
 export interface CheckoutItem {
-  productId: number;
+  id: number;
   name: string;
-  price: number;
   currentTotalPrice: number | null;
   qty: number;
   image: string;
-  storeId: number;
 }
 
-interface CheckoutVoucher {
-  id: number;
-  code: string;
+interface CheckoutVoucher extends SellerVoucher {
   discountInCents: number;
   shortfallInCents: number;
 }
@@ -47,7 +44,7 @@ interface CheckoutVoucher {
 @Component({
   selector: 'app-checkout',
   standalone: true,
-  imports: [CommonModule, RouterLink, FormsModule, ReactiveFormsModule, TopNavbarComponent, CompactFooterComponent, ModalComponent],
+  imports: [CommonModule, RouterLink, FormsModule, TopNavbarComponent, CompactFooterComponent, ModalComponent],
   templateUrl: './checkout.component.html',
   styleUrl: './checkout.component.css'
 })
@@ -58,13 +55,19 @@ export class CheckoutComponent implements OnInit {
   private voucherService = inject(VoucherService);
   private cdr = inject(ChangeDetectorRef);
   private router = inject(Router);
-  private voucherSubtotalInCents: number | null = null;
+  private route = inject(ActivatedRoute);
+  private destroyRef = inject(DestroyRef);
+  private currentSubtotalInCents: number | null = null;
+  private selectedVoucherId: number | null = null;
+  private currentStoreId: number | null = null;
 
-  voucherControl = new FormControl<number | null>(null);
+  currentStoreName = '';
+  cartMessage = '';
   availableVouchers: CheckoutVoucher[] = [];
   unavailableVouchers: CheckoutVoucher[] = [];
   isLoadingVouchers = false;
   voucherLoadFailed = false;
+  isVoucherModalOpen = false;
 
   selectedCourier = 'reguler';
   selectedPayment = 'bca_va';
@@ -122,60 +125,82 @@ export class CheckoutComponent implements OnInit {
 
   // --- 1. FETCH CART ---
   loadCartData(): void {
+    if (this.isLoadingCart || this.isProcessing) return;
+
     this.isLoadingCart = true;
-    this.cartSvc.getCartItems().subscribe({
+    this.cartMessage = '';
+    this.orderItems = [];
+    this.currentStoreId = null;
+    this.currentStoreName = '';
+    this.currentSubtotalInCents = null;
+    this.selectedVoucherId = null;
+    this.availableVouchers = [];
+    this.unavailableVouchers = [];
+    this.voucherLoadFailed = false;
+
+    this.cartSvc.getCartItems().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (response: CartItemResponse[]) => {
+        this.isLoadingCart = false;
         const items = response ?? [];
-        this.orderItems = items.map(item => ({
-          productId: item.productId,
+        if (items.length === 0) {
+          this.cartMessage = 'Keranjang Anda kosong.';
+          return;
+        }
+
+        const storeParam = this.route.snapshot.queryParamMap.get('storeId');
+        if (storeParam === null && new Set(items.map(item => item.storeId)).size > 1) {
+          this.cartMessage = 'Pilih satu toko dari keranjang untuk melanjutkan checkout.';
+          return;
+        }
+
+        const storeId = storeParam === null ? items[0].storeId : Number(storeParam);
+        const storeItems = items.filter(item => item.storeId === storeId);
+        if (!Number.isSafeInteger(storeId) || storeId <= 0 || storeItems.length === 0) {
+          this.cartMessage = 'Tidak ada barang dari toko ini di keranjang.';
+          return;
+        }
+
+        this.currentStoreId = storeId;
+        this.currentStoreName = storeItems[0].storeName;
+        this.orderItems = storeItems.map(item => ({
+          id: item.id,
           name: item.productName,
-          price: item.totalPrice / item.quantity,
           currentTotalPrice: item.currentTotalPrice ?? null,
           qty: item.quantity,
           image: this.cartSvc.defaultPlaceholder,
-          storeId: item.storeId
         }));
-        this.isLoadingCart = false;
-        this.prepareVouchers(items);
-        this.cdr.detectChanges();
+        this.prepareVouchers(storeItems);
       },
       error: (err) => {
         console.error('Gagal mengambil data keranjang', err);
+        this.cartMessage = 'Gagal memuat data keranjang.';
         this.isLoadingCart = false;
-      }
+      },
     });
   }
 
   private prepareVouchers(items: CartItemResponse[]): void {
-    this.voucherControl.reset();
-    this.availableVouchers = [];
-    this.unavailableVouchers = [];
-    this.voucherSubtotalInCents = null;
-
-    const storeId = items[0]?.storeId;
-    if (storeId === undefined) return;
-
     let subtotalInCents = 0;
     for (const item of items) {
       const total = item.currentTotalPrice;
-      if (item.storeId !== storeId || total == null || total < 0) return;
+      if (total == null || total < 0) return;
       subtotalInCents += Math.round(total * CENTS_PER_RUPIAH);
     }
 
-    this.voucherSubtotalInCents = subtotalInCents;
+    this.currentSubtotalInCents = subtotalInCents;
     this.loadVouchers();
   }
 
   loadVouchers(): void {
-    const storeId = this.orderItems[0]?.storeId;
-    const subtotalInCents = this.voucherSubtotalInCents;
-    if (storeId === undefined || subtotalInCents === null || this.isLoadingVouchers) return;
+    const storeId = this.currentStoreId;
+    const subtotalInCents = this.currentSubtotalInCents;
+    if (storeId === null || subtotalInCents === null || this.isLoadingVouchers) return;
 
     this.isLoadingVouchers = true;
     this.voucherLoadFailed = false;
-    this.voucherService.getVouchers(storeId).subscribe({
+    this.voucherService.getVouchers(storeId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: vouchers => {
-        this.setVoucherOptions(vouchers, subtotalInCents);
+        this.setVoucherOptions(vouchers ?? [], subtotalInCents);
         this.isLoadingVouchers = false;
       },
       error: () => {
@@ -193,8 +218,7 @@ export class CheckoutComponent implements OnInit {
       const minPurchaseInCents = voucher.minPurchaseAmount * CENTS_PER_RUPIAH;
 
       return {
-        id: voucher.id,
-        code: voucher.code,
+        ...voucher,
         discountInCents: Math.min(calculatedDiscountInCents, maxDiscountInCents),
         shortfallInCents: Math.max(minPurchaseInCents - subtotalInCents, 0),
       };
@@ -211,7 +235,7 @@ export class CheckoutComponent implements OnInit {
     this.isLoadingAddress = true;
     this.addressSvc.getAllAddresses().subscribe({
       next: (response: AddressResponse[]) => {
-        this.savedAddresses = response.map(a => ({
+        this.savedAddresses = (response ?? []).map(a => ({
           id: a.id,
           name: a.recipientName,
           phone: a.phoneNumber,
@@ -238,25 +262,35 @@ export class CheckoutComponent implements OnInit {
   }
 
   get canChooseVoucher(): boolean {
-    return this.voucherSubtotalInCents !== null;
+    return this.currentSubtotalInCents !== null;
+  }
+
+  get canPay(): boolean {
+    return this.currentStoreId !== null && this.canChooseVoucher && !this.isLoadingAddress
+      && !this.isLoadingVouchers && !this.isProcessing && !this.isVoucherModalOpen;
+  }
+
+  get voucherOptions(): CheckoutVoucher[] {
+    return [...this.availableVouchers, ...this.unavailableVouchers];
   }
 
   get selectedVoucher(): CheckoutVoucher | undefined {
-    const voucherId = this.voucherControl.value;
-    return voucherId === null ? undefined : this.availableVouchers.find(voucher => voucher.id === voucherId);
+    return this.availableVouchers.find(voucher => voucher.id === this.selectedVoucherId);
   }
 
-  itemSubtotal(item: CheckoutItem): number {
-    return this.selectedVoucher && item.currentTotalPrice !== null
-      ? item.currentTotalPrice
-      : item.price * item.qty;
+  applyVoucher(voucher: CheckoutVoucher): void {
+    if (voucher.shortfallInCents > 0 || this.isProcessing) return;
+
+    this.selectedVoucherId = voucher.id;
+    this.isVoucherModalOpen = false;
+  }
+
+  removeVoucher(): void {
+    this.selectedVoucherId = null;
   }
 
   get subtotal(): number {
-    if (this.selectedVoucher && this.voucherSubtotalInCents !== null) {
-      return this.voucherSubtotalInCents / CENTS_PER_RUPIAH;
-    }
-    return this.orderItems.reduce((acc, item) => acc + (item.price * item.qty), 0);
+    return (this.currentSubtotalInCents ?? 0) / CENTS_PER_RUPIAH;
   }
 
   get currentShippingCost(): number {
@@ -265,18 +299,13 @@ export class CheckoutComponent implements OnInit {
   }
 
   get grandTotal(): number {
-    const voucher = this.selectedVoucher;
-    if (voucher && this.voucherSubtotalInCents !== null) {
-      return (this.voucherSubtotalInCents - voucher.discountInCents) / CENTS_PER_RUPIAH;
-    }
-    return this.subtotal;
+    return ((this.currentSubtotalInCents ?? 0) - (this.selectedVoucher?.discountInCents ?? 0)) / CENTS_PER_RUPIAH;
   }
 
   processPayment(): void {
-    if (this.orderItems.length === 0) {
-      alert('Keranjang Anda kosong.');
-      return;
-    }
+    const storeId = this.currentStoreId;
+    if (storeId === null || !this.canPay) return;
+
     if (this.shippingAddress.id === 0) {
       alert('Silakan pilih alamat pengiriman terlebih dahulu.');
       this.openAddressModal();
@@ -285,10 +314,8 @@ export class CheckoutComponent implements OnInit {
 
     this.isProcessing = true;
 
-    const storeId = this.orderItems[0].storeId;
-
     const payload: OrderPayload = {
-      storeId: storeId,
+      storeId,
       addressId: this.shippingAddress.id
     };
     const voucher = this.selectedVoucher;
@@ -314,6 +341,7 @@ export class CheckoutComponent implements OnInit {
         this.isProcessing = false;
         console.error('Gagal membuat pesanan', err);
         alert(err.error?.message || 'Gagal memproses pembayaran. Silakan coba lagi.');
+        if (err.status === 400 || err.status === 409) this.loadCartData();
       }
     });
   }

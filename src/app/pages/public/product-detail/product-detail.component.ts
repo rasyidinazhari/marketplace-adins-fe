@@ -5,6 +5,8 @@ import { FormsModule } from '@angular/forms';
 import { TopNavbarComponent } from '../../../layout/top-navbar/top-navbar.component';
 import { CompactFooterComponent } from '../../../layout/compact-footer/compact-footer.component';
 import { ProductService } from '../../../services/product/product.service';
+import { ReviewService } from '../../../services/review/review.service';
+import { ProductReview, ReviewStats } from '../../../models/review.model';
 
 export interface ProductDetailData {
   id: number;
@@ -56,6 +58,7 @@ export class PublicProductDetailComponent implements OnInit {
   private router = inject(Router);
   private route = inject(ActivatedRoute);
   private productSvc = inject(ProductService);
+  private reviewSvc = inject(ReviewService);
 
   selectedImageIndex = 0;
   selectedColor = 'Midnight Black';
@@ -63,6 +66,15 @@ export class PublicProductDetailComponent implements OnInit {
   activeTab: 'deskripsi' | 'spesifikasi' | 'ulasan' = 'deskripsi';
   isWishlisted = false;
   addedToCartFeedback = false;
+
+  // Review state (read-only testimonials)
+  reviews: ProductReview[] = [];
+  isLoadingReviews = false;
+  reviewStats: ReviewStats = {
+    averageRating: 0,
+    totalReviews: 0,
+    ratingBreakdown: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+  };
 
   product: ProductDetailData = {
     id: 1,
@@ -188,7 +200,9 @@ export class PublicProductDetailComponent implements OnInit {
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
     if (id) {
-      this.loadProduct(Number(id));
+      const numId = Number(id);
+      this.loadProduct(numId);
+      this.loadReviews(numId);
     }
   }
 
@@ -242,5 +256,24 @@ export class PublicProductDetailComponent implements OnInit {
 
   buyNow(): void {
     this.router.navigate(['/checkout']);
+  }
+
+  loadReviews(productId: number): void {
+    this.isLoadingReviews = true;
+    this.reviewSvc.getReviewsByProductId(productId).subscribe({
+      next: (data) => {
+        this.reviews = data;
+        this.reviewStats = this.reviewSvc.calculateStats(data);
+        if (data.length > 0) {
+          this.product.rating = this.reviewStats.averageRating;
+          this.product.ratingCount = this.reviewStats.totalReviews;
+        }
+        this.isLoadingReviews = false;
+      },
+      error: (err) => {
+        console.warn('Gagal memuat ulasan produk:', err);
+        this.isLoadingReviews = false;
+      }
+    });
   }
 }

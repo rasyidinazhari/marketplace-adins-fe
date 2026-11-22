@@ -1,6 +1,6 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink, Router } from '@angular/router';
+import { RouterLink, Router, ActivatedRoute } from '@angular/router';
 import {
   FormBuilder,
   Validators,
@@ -19,18 +19,25 @@ import { AuthService } from '../../../services/auth/auth.service';
 })
 export class BuyerLoginComponent {
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
   private fb = inject(FormBuilder);
   private loginSvc = inject(LoginService);
   private authSvc = inject(AuthService);
+  private cdr = inject(ChangeDetectorRef);
 
   isLoading = false;
   rememberMe = true;
+  showPassword = false;
   errorMessage = '';
 
   loginForm = this.fb.group({
     email: ['', [Validators.required, Validators.email]],
-    password: ['', [Validators.required, Validators.minLength(8)]],
+    password: ['', [Validators.required, Validators.minLength(6)]],
   });
+
+  togglePasswordVisibility(): void {
+    this.showPassword = !this.showPassword;
+  }
 
   onLoginHandler(): void {
     if (this.loginForm.invalid) {
@@ -43,7 +50,7 @@ export class BuyerLoginComponent {
     const formValue = this.loginForm.value;
 
     const payload = {
-      email: formValue.email ?? '',
+      email: (formValue.email ?? '').trim(),
       password: formValue.password ?? '',
       role: 'Buyer' as const,
     };
@@ -52,18 +59,23 @@ export class BuyerLoginComponent {
       next: (response: any) => {
         this.isLoading = false;
         if (!response?.token || response.user?.role !== payload.role) {
-          this.errorMessage = 'Respons login tidak valid.';
+          this.errorMessage = 'Respons login tidak valid atau akun bukan Buyer.';
+          this.cdr.detectChanges();
           return;
         }
         this.authSvc.setToken(response.token);
         this.authSvc.setUser(response.user);
-        this.router.navigate(['/']);
+        const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl') || '/';
+        this.router.navigateByUrl(returnUrl);
       },
       error: (err) => {
         this.isLoading = false;
-        this.errorMessage = err.status === 0
-          ? 'Tidak dapat terhubung ke server. Coba lagi.'
-          : err.error?.message || 'Gagal masuk. Periksa akun Anda dan coba lagi.';
+        this.errorMessage =
+          err.status === 0
+            ? 'Tidak dapat terhubung ke server. Coba lagi.'
+            : err.error?.message ||
+              'Gagal masuk. Periksa email, kata sandi, atau role akun Anda.';
+        this.cdr.detectChanges();
       },
     });
   }

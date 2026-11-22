@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink, Router } from '@angular/router';
 import { FormBuilder, Validators, ReactiveFormsModule, FormsModule } from '@angular/forms';
@@ -17,22 +17,20 @@ export class SellerLoginComponent {
   private fb = inject(FormBuilder);
   private loginSvc = inject(LoginService);
   private authSvc = inject(AuthService);
+  private cdr = inject(ChangeDetectorRef);
 
   isLoading = false;
   rememberMe = true;
+  showPassword = false;
   errorMessage = '';
 
   loginForm = this.fb.group({
-    email: ['seller@adins.co.id', [Validators.required, Validators.email]],
-    password: ['password123', [Validators.required, Validators.minLength(6)]]
+    email: ['', [Validators.required, Validators.email]],
+    password: ['', [Validators.required, Validators.minLength(6)]]
   });
 
-  fillDemo(): void {
-    this.loginForm.patchValue({
-      email: 'seller@adins.co.id',
-      password: 'password123'
-    });
-    this.errorMessage = '';
+  togglePasswordVisibility(): void {
+    this.showPassword = !this.showPassword;
   }
 
   onSubmit(): void {
@@ -46,7 +44,7 @@ export class SellerLoginComponent {
     const formValue = this.loginForm.value;
 
     const payload = {
-      email: formValue.email ?? '',
+      email: (formValue.email ?? '').trim(),
       password: formValue.password ?? '',
       role: 'Seller' as const
     };
@@ -55,7 +53,8 @@ export class SellerLoginComponent {
       next: (response: any) => {
         this.isLoading = false;
         if (!response?.token || response.user?.role !== payload.role) {
-          this.errorMessage = 'Respons login tidak valid.';
+          this.errorMessage = 'Respons login tidak valid atau akun bukan Seller.';
+          this.cdr.detectChanges();
           return;
         }
         this.authSvc.setToken(response.token);
@@ -66,7 +65,8 @@ export class SellerLoginComponent {
         this.isLoading = false;
         this.errorMessage = err.status === 0
           ? 'Tidak dapat terhubung ke server. Coba lagi.'
-          : err.error?.message || 'Gagal masuk. Periksa akun Anda dan coba lagi.';
+          : err.error?.message || 'Gagal masuk. Periksa email, kata sandi, atau role akun Anda.';
+        this.cdr.detectChanges();
       },
     });
   }

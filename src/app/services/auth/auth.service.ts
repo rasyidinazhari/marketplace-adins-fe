@@ -8,6 +8,7 @@ export interface AuthUser {
   name: string;
   email: string;
   role: string;
+  storeName?: string | null;
   stores?: Array<{ id: number; storeName?: string; name?: string }>;
   storeId?: number;
 }
@@ -62,6 +63,23 @@ export class AuthService {
   }
 
   /**
+   * Mengambil StoreName untuk seller dari data user yang tersimpan.
+   */
+  getStoreName(): string | null {
+    const user = this.getUser();
+    if (!user) return null;
+
+    const directName = user.storeName?.trim();
+    if (directName) {
+      return directName;
+    }
+
+    const firstStore = user.stores?.[0];
+    const nestedName = (firstStore?.storeName ?? firstStore?.name)?.trim();
+    return nestedName || null;
+  }
+
+  /**
    * Mengambil StoreId untuk seller.
    * Sesuai ketentuan: mengambil dari user.Stores.First().Id dengan fallback ke 1.
    */
@@ -81,4 +99,3 @@ export class AuthService {
     localStorage.removeItem('auth_user');
   }
 }
-

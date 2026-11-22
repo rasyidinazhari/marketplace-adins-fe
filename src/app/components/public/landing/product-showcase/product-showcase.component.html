@@ -1,4 +1,4 @@
-<section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+<section id="rekomendasi" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 scroll-mt-16">
   
   <!-- Section Header -->
   <div class="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
@@ -31,80 +31,115 @@
     </div>
   </div>
 
-  <!-- Product Cards Grid (Responsive, Clean Borders, Shadcn Card aesthetic) -->
-  <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-    @for (product of filteredProducts; track product.id) {
-      <div class="group relative flex flex-col rounded-xl border border-zinc-200/80 bg-white shadow-2xs hover:shadow-md hover:border-zinc-300 transition-all duration-200 overflow-hidden">
-        
-        <!-- Image & Badge Container -->
-        <div class="relative aspect-square w-full overflow-hidden bg-zinc-100">
-          <img 
-            [src]="product.image" 
-            [alt]="product.name" 
-            class="h-full w-full object-cover object-center group-hover:scale-105 transition-transform duration-300" 
-            loading="lazy" />
-          
-          @if (product.badge) {
-            <span class="absolute top-2.5 left-2.5 rounded-full bg-zinc-900/90 text-zinc-50 text-[10px] font-medium px-2.5 py-0.5 backdrop-blur-xs shadow-xs">
-              {{ product.badge }}
-            </span>
-          }
-
-          <!-- Quick Action Button Overlay -->
-          <div class="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-            <a [routerLink]="['/products', product.id]" class="p-2 rounded-lg bg-white/95 text-zinc-900 shadow-md hover:bg-zinc-900 hover:text-white transition-colors inline-flex items-center justify-center" title="Lihat Detail">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-            </a>
+  <!-- Loading Skeleton State -->
+  @if (isLoading) {
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+      @for (item of [1, 2, 3, 4, 5, 6, 7, 8]; track item) {
+        <div class="rounded-xl border border-zinc-200/80 bg-white p-4 shadow-2xs animate-pulse space-y-4">
+          <div class="aspect-square w-full rounded-lg bg-zinc-100"></div>
+          <div class="space-y-2">
+            <div class="h-3 bg-zinc-100 rounded w-1/3"></div>
+            <div class="h-4 bg-zinc-100 rounded w-3/4"></div>
+            <div class="h-4 bg-zinc-100 rounded w-1/2"></div>
           </div>
         </div>
+      }
+    </div>
+  } @else if (filteredProducts.length === 0) {
+    <!-- Empty State -->
+    <div class="py-16 text-center border border-dashed border-zinc-200 rounded-xl bg-zinc-50/50 space-y-3">
+      <div class="w-12 h-12 mx-auto rounded-full bg-zinc-100 flex items-center justify-center text-zinc-400">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+        </svg>
+      </div>
+      <div class="space-y-1">
+        <p class="text-sm font-semibold text-zinc-900">Belum ada produk untuk kategori ini</p>
+        <p class="text-xs text-zinc-500">Coba pilih kategori lain atau tampilkan semua produk.</p>
+      </div>
+      <button
+        (click)="selectCategory('Semua')"
+        class="inline-flex items-center px-3.5 py-1.5 text-xs font-semibold text-zinc-900 bg-white border border-zinc-200 rounded-lg shadow-2xs hover:bg-zinc-50 transition-colors"
+      >
+        Tampilkan Semua Produk
+      </button>
+    </div>
+  } @else {
+    <!-- Product Cards Grid (Responsive, Clean Borders, Shadcn Card aesthetic) -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+      @for (product of filteredProducts; track product.id) {
+        <div class="group relative flex flex-col rounded-xl border border-zinc-200/80 bg-white shadow-2xs hover:shadow-md hover:border-zinc-300 transition-all duration-200 overflow-hidden">
+          
+          <!-- Image & Badge Container -->
+          <div class="relative aspect-square w-full overflow-hidden bg-zinc-100">
+            <img 
+              [src]="product.image" 
+              [alt]="product.name" 
+              class="h-full w-full object-cover object-center group-hover:scale-105 transition-transform duration-300" 
+              loading="lazy" />
+            
+            @if (product.badge) {
+              <span class="absolute top-2.5 left-2.5 rounded-full bg-zinc-900/90 text-zinc-50 text-[10px] font-medium px-2.5 py-0.5 backdrop-blur-xs shadow-xs">
+                {{ product.badge }}
+              </span>
+            }
 
-        <!-- Card Content -->
-        <div class="flex flex-1 flex-col p-4">
-          <!-- Category & Store -->
-          <div class="flex items-center justify-between text-xs text-zinc-500 mb-1">
-            <span class="font-medium text-zinc-400">{{ product.category }}</span>
-            <span class="truncate max-w-[120px]">{{ product.store }}</span>
+            <!-- Quick Action Button Overlay -->
+            <div class="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+              <a [routerLink]="['/products', product.id]" class="p-2 rounded-lg bg-white/95 text-zinc-900 shadow-md hover:bg-zinc-900 hover:text-white transition-colors inline-flex items-center justify-center" title="Lihat Detail">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+              </a>
+            </div>
           </div>
 
-          <!-- Product Name -->
-          <a [routerLink]="['/products', product.id]">
-            <h3 class="font-medium text-sm text-zinc-900 line-clamp-2 leading-snug group-hover:text-zinc-600 transition-colors">
-              {{ product.name }}
-            </h3>
-          </a>
-
-          <!-- Rating & Sales -->
-          <div class="flex items-center gap-1.5 mt-2 text-xs text-zinc-500">
-            <span class="flex items-center text-amber-500 font-semibold">
-              ★ {{ product.rating }}
-            </span>
-            <span class="text-zinc-300">•</span>
-            <span>Terjual {{ product.salesCount }}</span>
-          </div>
-
-          <!-- Price & CTA -->
-          <div class="mt-4 pt-3 border-t border-zinc-100 flex items-center justify-between">
-            <div>
-              <div class="text-base font-bold text-zinc-950">
-                Rp {{ product.price | number:'1.0-0' }}
-              </div>
-              @if (product.originalPrice) {
-                <div class="text-xs text-zinc-400 line-through">
-                  Rp {{ product.originalPrice | number:'1.0-0' }}
-                </div>
-              }
+          <!-- Card Content -->
+          <div class="flex flex-1 flex-col p-4">
+            <!-- Category & Store -->
+            <div class="flex items-center justify-between text-xs text-zinc-500 mb-1">
+              <span class="font-medium text-zinc-400">{{ product.category }}</span>
+              <span class="truncate max-w-[120px]">{{ product.store }}</span>
             </div>
 
-            <a [routerLink]="['/cart']" 
-               class="inline-flex items-center justify-center px-3 py-1.5 text-xs font-medium text-zinc-900 bg-zinc-100 hover:bg-zinc-900 hover:text-white rounded-md transition-colors">
-              + Keranjang
+            <!-- Product Name -->
+            <a [routerLink]="['/products', product.id]">
+              <h3 class="font-medium text-sm text-zinc-900 line-clamp-2 leading-snug group-hover:text-zinc-600 transition-colors">
+                {{ product.name }}
+              </h3>
             </a>
-          </div>
-        </div>
 
-      </div>
-    }
-  </div>
+            <!-- Rating & Sales -->
+            <div class="flex items-center gap-1.5 mt-2 text-xs text-zinc-500">
+              <span class="flex items-center text-amber-500 font-semibold">
+                ★ {{ product.rating }}
+              </span>
+              <span class="text-zinc-300">•</span>
+              <span>Terjual {{ product.salesCount }}</span>
+            </div>
+
+            <!-- Price & CTA -->
+            <div class="mt-4 pt-3 border-t border-zinc-100 flex items-center justify-between">
+              <div>
+                <div class="text-base font-bold text-zinc-950">
+                  Rp {{ product.price | number:'1.0-0' }}
+                </div>
+                @if (product.originalPrice) {
+                  <div class="text-xs text-zinc-400 line-through">
+                    Rp {{ product.originalPrice | number:'1.0-0' }}
+                  </div>
+                }
+              </div>
+
+              <a [routerLink]="['/products', product.id]" 
+                 class="inline-flex items-center justify-center px-3 py-1.5 text-xs font-medium text-zinc-900 bg-zinc-100 hover:bg-zinc-900 hover:text-white rounded-md transition-colors">
+                Lihat Detail
+              </a>
+            </div>
+          </div>
+
+        </div>
+      }
+    </div>
+  }
 
   <!-- Bottom CTA Banner / Voucher Promo -->
   <div class="mt-16 rounded-2xl border border-zinc-200 bg-gradient-to-r from-zinc-900 to-zinc-800 p-8 text-zinc-50 shadow-sm flex flex-col md:flex-row items-center justify-between gap-6">

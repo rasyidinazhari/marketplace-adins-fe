@@ -19,7 +19,7 @@
 .env
 .env.local
 .env.*.local
-/src/environments/
+# /src/environments/
 
 # IDEs and editors
 /.vscode/*
