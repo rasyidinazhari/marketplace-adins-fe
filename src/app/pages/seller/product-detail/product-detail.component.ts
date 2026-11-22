@@ -40,6 +40,7 @@ export class ProductDetailComponent implements OnInit {
   categories: CategoryItem[] = [];
   stores: StoreSummary[] = [];
   storeName = '';
+  priceDisplay = '';
 
   readonly productForm = this.formBuilder.group({
     storeId: this.formBuilder.control<number | null>(null),
@@ -90,6 +91,7 @@ export class ProductDetailComponent implements OnInit {
         } else if (this.isEditMode) {
           this.loadError = 'Produk tidak tersedia.';
         } else {
+          this.priceDisplay = '';
           this.productForm.controls.storeId.reset({
             value: stores.length === 1 ? stores[0].id : null,
             disabled: stores.length === 0,
@@ -104,6 +106,25 @@ export class ProductDetailComponent implements OnInit {
         this.isLoading = false;
       },
     });
+  }
+
+  onPriceInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const digitsOnly = input.value.replace(/\D/g, '');
+
+    if (!digitsOnly) {
+      this.priceDisplay = '';
+      input.value = '';
+      this.productForm.controls.price.setValue(null);
+      return;
+    }
+
+    const formatted = digitsOnly.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    this.priceDisplay = formatted;
+    input.value = formatted;
+
+    const numericValue = Number(digitsOnly);
+    this.productForm.controls.price.setValue(Number.isSafeInteger(numericValue) ? numericValue : null);
   }
 
   setCategory(categoryId: number, selected: boolean): void {
@@ -151,14 +172,23 @@ export class ProductDetailComponent implements OnInit {
   private fillEditForm(product: SellerProduct): void {
     this.storeName = product.store?.storeName || `Toko #${product.storeId}`;
     const categoryIds = product.productCategories?.map(relation => relation.categoryId) ?? [];
+    const priceValue = product.productPrice ?? null;
+
     this.originalForm = {
       name: product.productName ?? '',
       description: product.productDescription ?? '',
-      price: product.productPrice ?? null,
+      price: priceValue,
       stock: product.productStock ?? null,
       categoryIds: [...new Set(categoryIds)],
     };
+    this.priceDisplay = this.formatRupiahNumber(priceValue);
     this.productForm.reset(this.originalForm);
+  }
+
+  private formatRupiahNumber(value: number | null): string {
+    if (value === null || !Number.isFinite(value)) return '';
+    const integerPart = Math.trunc(value).toString();
+    return integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
   }
 
   private save(request: Observable<unknown>): void {
