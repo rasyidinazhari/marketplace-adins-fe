@@ -4,6 +4,7 @@ import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { OrderResponse, OrderStatus } from '../../../models/order.model';
 import { OrderService } from '../../../services/order/order.service';
+import { SellerStoreScopeService } from '../../../services/store/seller-store-scope.service';
 import { getSellerOrderStatus, sellerOrderStatuses } from '../seller-order-status';
 
 @Component({
@@ -16,6 +17,7 @@ import { getSellerOrderStatus, sellerOrderStatuses } from '../seller-order-statu
 export class SellerOrderListComponent implements OnInit {
   private orderService = inject(OrderService);
   private formBuilder = inject(FormBuilder);
+  private storeControl = inject(SellerStoreScopeService, { optional: true })?.storeControl;
 
   searchControl = this.formBuilder.nonNullable.control('');
   statuses = sellerOrderStatuses;
@@ -48,9 +50,16 @@ export class SellerOrderListComponent implements OnInit {
     });
   }
 
+  get ordersForSelectedStore(): OrderResponse[] {
+    const storeId = this.storeControl?.value;
+    if (storeId == null) return this.orders;
+
+    return this.orders.filter(order => order.storeId === storeId);
+  }
+
   get orderCounts(): Partial<Record<OrderStatus, number>> {
     const counts: Partial<Record<OrderStatus, number>> = {};
-    for (const order of this.orders) {
+    for (const order of this.ordersForSelectedStore) {
       counts[order.orderStatus] = (counts[order.orderStatus] ?? 0) + 1;
     }
     return counts;
@@ -59,9 +68,10 @@ export class SellerOrderListComponent implements OnInit {
   get filteredOrders(): OrderResponse[] {
     const searchTerm = this.searchControl.value.trim().toLowerCase();
     const selectedStatus = this.selectedStatus;
-    if (selectedStatus === null && !searchTerm) return this.orders;
+    const orders = this.ordersForSelectedStore;
+    if (selectedStatus === null && !searchTerm) return orders;
 
-    return this.orders.filter(order => {
+    return orders.filter(order => {
       if (selectedStatus !== null && order.orderStatus !== selectedStatus) return false;
       if (!searchTerm) return true;
 

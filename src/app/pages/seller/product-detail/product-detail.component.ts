@@ -6,6 +6,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Observable, forkJoin, of } from 'rxjs';
 import { CategoryItem, SellerProduct, StoreSummary, UpdateProductPayload } from '../../../models/product.model';
 import { ProductService } from '../../../services/product/product.service';
+import { SellerStoreScopeService } from '../../../services/store/seller-store-scope.service';
 
 interface ProductFormData {
   name: string;
@@ -28,6 +29,7 @@ export class ProductDetailComponent implements OnInit {
   private productService = inject(ProductService);
   private destroyRef = inject(DestroyRef);
   private formBuilder = inject(FormBuilder);
+  private dashboardStoreControl = inject(SellerStoreScopeService, { optional: true })?.storeControl;
   private originalForm: ProductFormData | null = null;
 
   isEditMode = false;
@@ -88,8 +90,9 @@ export class ProductDetailComponent implements OnInit {
         } else if (this.isEditMode) {
           this.loadError = 'Produk tidak tersedia.';
         } else {
+          const dashboardStore = stores.find(store => store.id === this.dashboardStoreControl?.value);
           this.productForm.controls.storeId.reset({
-            value: stores.length === 1 ? stores[0].id : null,
+            value: dashboardStore?.id ?? (stores.length === 1 ? stores[0].id : null),
             disabled: stores.length === 0,
           });
         }

@@ -8,6 +8,7 @@ import { ModalComponent } from '../../../components/ui/modal/modal.component';
 import { StoreSummary } from '../../../models/product.model';
 import { CreateVoucherPayload, SellerVoucher } from '../../../models/voucher.model';
 import { ProductService } from '../../../services/product/product.service';
+import { SellerStoreScopeService } from '../../../services/store/seller-store-scope.service';
 import { VoucherService } from '../../../services/voucher/voucher.service';
 
 @Component({
@@ -22,6 +23,7 @@ export class VoucherComponent implements OnInit {
   private voucherService = inject(VoucherService);
   private destroyRef = inject(DestroyRef);
   private formBuilder = inject(FormBuilder);
+  private dashboardStoreControl = inject(SellerStoreScopeService, { optional: true })?.storeControl;
   private voucherRequests = new Subject<number | null>();
 
   maxVoucherAmount = 2_147_483_647;
@@ -79,7 +81,9 @@ export class VoucherComponent implements OnInit {
       next: stores => {
         this.stores = stores;
         this.isLoadingStores = false;
-        this.storeControl.setValue(stores.length === 1 ? stores[0].id : null);
+
+        const dashboardStore = stores.find(store => store.id === this.dashboardStoreControl?.value);
+        this.storeControl.setValue(dashboardStore?.id ?? (stores.length === 1 ? stores[0].id : null));
       },
       error: () => {
         this.isLoadingStores = false;
