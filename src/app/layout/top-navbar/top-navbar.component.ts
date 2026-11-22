@@ -11,8 +11,8 @@ import { AuthService, UserRole } from '../../services/auth/auth.service';
   styleUrl: './top-navbar.component.css'
 })
 export class TopNavbarComponent {
-  private readonly authService = inject(AuthService);
-  private readonly router = inject(Router);
+  private authService = inject(AuthService);
+  private router = inject(Router);
 
   @ViewChild('accountMenu') private accountMenu?: ElementRef<HTMLElement>;
 

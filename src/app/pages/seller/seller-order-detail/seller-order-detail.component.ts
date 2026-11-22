@@ -16,13 +16,12 @@ import { getSellerOrderStatus } from '../seller-order-status';
   styleUrl: './seller-order-detail.component.css',
 })
 export class SellerOrderDetailComponent implements OnInit {
-  private readonly route = inject(ActivatedRoute);
-  private readonly orderService = inject(OrderService);
-  private readonly destroyRef = inject(DestroyRef);
-  private orderRequest?: Subscription;
-  private updateRequest?: Subscription;
+  private route = inject(ActivatedRoute);
+  private orderService = inject(OrderService);
+  private destroyRef = inject(DestroyRef);
+  private activeOrderRequest?: Subscription;
 
-  readonly getOrderStatus = getSellerOrderStatus;
+  getOrderStatus = getSellerOrderStatus;
 
   orderId: number | null = null;
   order: OrderDetailResponse | null = null;
@@ -34,27 +33,13 @@ export class SellerOrderDetailComponent implements OnInit {
 
   ngOnInit(): void {
     this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(params => {
-      this.orderRequest?.unsubscribe();
-      this.updateRequest?.unsubscribe();
-      this.order = null;
-      this.isLoading = false;
-      this.isUpdating = false;
-
-      const id = params.get('id');
-      const orderId = Number(id);
-      if (!id || !/^\d+$/.test(id) || !Number.isSafeInteger(orderId) || orderId <= 0) {
-        this.orderId = null;
-        this.loadError = 'ID pesanan tidak valid.';
-        return;
-      }
-
-      this.orderId = orderId;
-      this.loadOrder();
+      this.openOrder(params.get('id'));
     });
   }
 
   loadOrder(): void {
-    if (this.orderId === null || this.isLoading || this.isUpdating) return;
+    const orderId = this.orderId;
+    if (orderId === null || this.isLoading || this.isUpdating) return;
 
     this.isLoading = true;
     this.loadError = '';
@@ -62,7 +47,7 @@ export class SellerOrderDetailComponent implements OnInit {
     this.needsReload = false;
     this.order = null;
 
-    this.orderRequest = this.orderService.getOrderById(this.orderId).pipe(
+    this.activeOrderRequest = this.orderService.getOrderById(orderId).pipe(
       takeUntilDestroyed(this.destroyRef),
     ).subscribe({
       next: order => {
@@ -89,10 +74,11 @@ export class SellerOrderDetailComponent implements OnInit {
 
     this.isUpdating = true;
     this.updateError = '';
-    this.updateRequest = this.orderService.updateOrderStatus(order.id, { status: 'ON_DELIVERY' }).pipe(
+    this.activeOrderRequest = this.orderService.updateOrderStatus(order.id, { status: 'ON_DELIVERY' }).pipe(
       takeUntilDestroyed(this.destroyRef),
     ).subscribe({
       next: updatedOrder => {
+        // Merge the updated order summary into the loaded detail.
         this.order = { ...order, ...updatedOrder };
         this.isUpdating = false;
       },
@@ -104,5 +90,22 @@ export class SellerOrderDetailComponent implements OnInit {
           : 'Gagal memperbarui status pesanan. Coba lagi.';
       },
     });
+  }
+
+  private openOrder(id: string | null): void {
+    this.activeOrderRequest?.unsubscribe();
+    this.order = null;
+    this.isLoading = false;
+    this.isUpdating = false;
+
+    const orderId = Number(id);
+    if (!id || !/^\d+$/.test(id) || !Number.isSafeInteger(orderId) || orderId <= 0) {
+      this.orderId = null;
+      this.loadError = 'ID pesanan tidak valid.';
+      return;
+    }
+
+    this.orderId = orderId;
+    this.loadOrder();
   }
 }

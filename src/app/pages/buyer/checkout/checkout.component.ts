@@ -55,12 +55,12 @@ export class CheckoutComponent implements OnInit {
   private cartSvc = inject(CartService);
   private orderSvc = inject(OrderService);
   private addressSvc = inject(AddressService);
-  private readonly voucherService = inject(VoucherService);
+  private voucherService = inject(VoucherService);
   private cdr = inject(ChangeDetectorRef);
   private router = inject(Router);
   private voucherSubtotalInCents: number | null = null;
 
-  readonly voucherControl = new FormControl<number | null>(null);
+  voucherControl = new FormControl<number | null>(null);
   availableVouchers: CheckoutVoucher[] = [];
   unavailableVouchers: CheckoutVoucher[] = [];
   isLoadingVouchers = false;

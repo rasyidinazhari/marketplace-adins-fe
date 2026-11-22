@@ -1,6 +1,5 @@
 import { DatePipe, DecimalPipe, NgClass } from '@angular/common';
-import { Component, DestroyRef, OnInit, inject } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Component, OnInit, inject } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { OrderResponse, OrderStatus } from '../../../models/order.model';
@@ -15,14 +14,13 @@ import { getSellerOrderStatus, sellerOrderStatuses } from '../seller-order-statu
   styleUrl: './seller-order-list.component.css',
 })
 export class SellerOrderListComponent implements OnInit {
-  private readonly orderService = inject(OrderService);
-  private readonly destroyRef = inject(DestroyRef);
-  private readonly formBuilder = inject(FormBuilder);
+  private orderService = inject(OrderService);
+  private formBuilder = inject(FormBuilder);
 
-  readonly searchControl = this.formBuilder.nonNullable.control('');
-  readonly statuses = sellerOrderStatuses;
-  readonly tabs = [{ value: null, label: 'Semua' }, ...sellerOrderStatuses];
-  readonly getOrderStatus = getSellerOrderStatus;
+  searchControl = this.formBuilder.nonNullable.control('');
+  statuses = sellerOrderStatuses;
+  tabs = [{ value: null, label: 'Semua' }, ...sellerOrderStatuses];
+  getOrderStatus = getSellerOrderStatus;
 
   selectedStatus: OrderStatus | null = null;
   orders: OrderResponse[] = [];
@@ -38,7 +36,7 @@ export class SellerOrderListComponent implements OnInit {
 
     this.isLoading = true;
     this.loadError = '';
-    this.orderService.getAllOrders().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+    this.orderService.getAllOrders().subscribe({
       next: orders => {
         this.orders = orders;
         this.isLoading = false;
@@ -59,11 +57,16 @@ export class SellerOrderListComponent implements OnInit {
   }
 
   get filteredOrders(): OrderResponse[] {
-    const search = this.searchControl.value.trim().toLowerCase();
+    const searchTerm = this.searchControl.value.trim().toLowerCase();
+    const selectedStatus = this.selectedStatus;
+    if (selectedStatus === null && !searchTerm) return this.orders;
+
     return this.orders.filter(order => {
-      const matchesStatus = this.selectedStatus === null || order.orderStatus === this.selectedStatus;
-      const matchesSearch = `ord-${order.id}`.includes(search) || order.userName.toLowerCase().includes(search);
-      return matchesStatus && matchesSearch;
+      if (selectedStatus !== null && order.orderStatus !== selectedStatus) return false;
+      if (!searchTerm) return true;
+
+      const orderNumber = `ord-${order.id}`;
+      return orderNumber.includes(searchTerm) || order.userName.toLowerCase().includes(searchTerm);
     });
   }
 }

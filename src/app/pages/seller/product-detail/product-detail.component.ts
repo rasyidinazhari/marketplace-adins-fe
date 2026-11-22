@@ -23,11 +23,11 @@ interface ProductFormData {
   styleUrl: './product-detail.component.css',
 })
 export class ProductDetailComponent implements OnInit {
-  private readonly router = inject(Router);
-  private readonly route = inject(ActivatedRoute);
-  private readonly productService = inject(ProductService);
-  private readonly destroyRef = inject(DestroyRef);
-  private readonly formBuilder = inject(FormBuilder);
+  private router = inject(Router);
+  private route = inject(ActivatedRoute);
+  private productService = inject(ProductService);
+  private destroyRef = inject(DestroyRef);
+  private formBuilder = inject(FormBuilder);
   private originalForm: ProductFormData | null = null;
 
   isEditMode = false;
@@ -41,7 +41,7 @@ export class ProductDetailComponent implements OnInit {
   stores: StoreSummary[] = [];
   storeName = '';
 
-  readonly productForm = this.formBuilder.group({
+  productForm = this.formBuilder.group({
     storeId: this.formBuilder.control<number | null>(null),
     name: this.formBuilder.nonNullable.control(''),
     description: this.formBuilder.nonNullable.control(''),
@@ -79,9 +79,7 @@ export class ProductDetailComponent implements OnInit {
     const stores$ = productId === null ? this.productService.getSellerStores() : of([]);
     const product$ = productId === null ? of(null) : this.productService.getSellerProductById(productId);
 
-    forkJoin({ categories: categories$, stores: stores$, product: product$ }).pipe(
-      takeUntilDestroyed(this.destroyRef),
-    ).subscribe({
+    forkJoin({ categories: categories$, stores: stores$, product: product$ }).subscribe({
       next: ({ categories, stores, product }) => {
         this.categories = categories;
         this.stores = stores;
@@ -121,15 +119,20 @@ export class ProductDetailComponent implements OnInit {
     const payload = this.buildProductPayload();
     if (!payload) return;
 
-    if (this.productId !== null) {
+    const productId = this.productId;
+    if (productId !== null) {
       if (Object.keys(payload).length === 0) {
         this.errorMessage = 'Belum ada perubahan untuk disimpan.';
         return;
       }
-      this.save(this.productService.updateProduct(this.productId, payload));
+      this.save(this.productService.updateProduct(productId, payload));
       return;
     }
 
+    this.createProduct(payload);
+  }
+
+  private createProduct(payload: UpdateProductPayload): void {
     const { productName, productPrice, productStock, productDescription, categoryIds } = payload;
     const storeId = this.productForm.controls.storeId.value;
     if (storeId === null || !this.stores.some(store => store.id === storeId)) {
@@ -144,7 +147,12 @@ export class ProductDetailComponent implements OnInit {
     }
 
     this.save(this.productService.createProduct({
-      storeId, productName, productPrice, productStock, productDescription, categoryIds,
+      storeId,
+      productName,
+      productPrice,
+      productStock,
+      productDescription,
+      categoryIds,
     }));
   }
 
@@ -171,19 +179,24 @@ export class ProductDetailComponent implements OnInit {
       error: (error: HttpErrorResponse) => {
         this.isSaving = false;
         this.hasConflict = error.status === 409;
-        if (this.hasConflict) {
-          this.errorMessage = 'Data produk sudah berubah. Muat ulang data produk sebelum menyimpan lagi.';
-        } else if (error.status === 400) {
-          const errors = error.error?.errors as Record<string, string[]> | undefined;
-          this.errorMessage = error.error?.message || Object.values(errors ?? {}).flat()[0] ||
-            'Periksa kembali data produk.';
-        } else if (error.status === 404) {
-          this.errorMessage = 'Produk atau toko sudah tidak tersedia untuk akun ini.';
-        } else {
-          this.errorMessage = 'Gagal menyimpan produk. Coba lagi.';
-        }
+        this.errorMessage = this.getSaveErrorMessage(error);
       },
     });
+  }
+
+  private getSaveErrorMessage(error: HttpErrorResponse): string {
+    switch (error.status) {
+      case 409:
+        return 'Data produk sudah berubah. Muat ulang data produk sebelum menyimpan lagi.';
+      case 400: {
+        const errors = error.error?.errors as Record<string, string[]> | undefined;
+        return error.error?.message || Object.values(errors ?? {}).flat()[0] || 'Periksa kembali data produk.';
+      }
+      case 404:
+        return 'Produk atau toko sudah tidak tersedia untuk akun ini.';
+      default:
+        return 'Gagal menyimpan produk. Coba lagi.';
+    }
   }
 
   private buildProductPayload(): UpdateProductPayload | null {
@@ -201,21 +214,24 @@ export class ProductDetailComponent implements OnInit {
     }
 
     if (!original || description !== original.description.trim()) {
-      if ((description.length > 0 || original !== null) && description.length < 25) {
+      const needsMinimumLength = description.length > 0 || original !== null;
+      if (needsMinimumLength && description.length < 25) {
         return this.invalidForm('Deskripsi produk minimal 25 karakter jika diubah atau diisi.');
       }
       if (description) payload.productDescription = description;
     }
 
     if (!original || price !== original.price) {
-      if (price === null || !Number.isFinite(price) || price < 1000 || price > 9999999999.99) {
+      const invalidPrice = price === null || !Number.isFinite(price) || price < 1_000 || price > 9_999_999_999.99;
+      if (invalidPrice) {
         return this.invalidForm('Harga produk harus antara Rp 1.000 dan Rp 9.999.999.999,99.');
       }
       payload.productPrice = price;
     }
 
     if (!original || stock !== original.stock) {
-      if (stock === null || !Number.isInteger(stock) || stock < 0 || stock > 2147483647) {
+      const invalidStock = stock === null || !Number.isInteger(stock) || stock < 0 || stock > 2_147_483_647;
+      if (invalidStock) {
         return this.invalidForm('Stok harus berupa bilangan bulat dari 0 sampai 2.147.483.647.');
       }
       payload.productStock = stock;
