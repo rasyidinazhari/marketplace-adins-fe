@@ -36,12 +36,13 @@ export class ReviewService {
    */
   createReview(
     productId: number,
-    data: { rating: number; comment: string }
+    data: { rating: number; comment: string; orderId?: number }
   ): Observable<ProductReview> {
     const user = this.authService.getUser();
     const payload: CreateReviewPayload = {
       productId,
       userId: user?.id ?? 0,
+      orderId: data.orderId,
       rating: data.rating,
       comment: data.comment,
     };
