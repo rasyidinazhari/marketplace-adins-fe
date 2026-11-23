@@ -1,19 +1,28 @@
 import { Component, inject, ChangeDetectorRef } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { RouterLink, Router, ActivatedRoute } from '@angular/router';
-import {
-  FormBuilder,
-  Validators,
-  ReactiveFormsModule,
-  FormsModule,
-} from '@angular/forms';
+import { FormBuilder, Validators, ReactiveFormsModule } from '@angular/forms';
 import { LoginService } from '../../../services/login/login.service';
 import { AuthService } from '../../../services/auth/auth.service';
+
+const MIN_PASSWORD_LENGTH = 6;
+
+type LoginField = 'email' | 'password';
+
+const FIELD_MESSAGES: Record<LoginField, Record<string, string>> = {
+  email: {
+    required: 'Email wajib diisi.',
+    email: 'Format email tidak valid.',
+  },
+  password: {
+    required: 'Kata sandi wajib diisi.',
+    minlength: `Kata sandi minimal ${MIN_PASSWORD_LENGTH} karakter.`,
+  },
+};
 
 @Component({
   selector: 'app-buyer-login',
   standalone: true,
-  imports: [CommonModule, RouterLink, ReactiveFormsModule, FormsModule],
+  imports: [RouterLink, ReactiveFormsModule],
   templateUrl: './buyer-login.component.html',
   styleUrl: './buyer-login.component.css',
 })
@@ -26,20 +35,33 @@ export class BuyerLoginComponent {
   private cdr = inject(ChangeDetectorRef);
 
   isLoading = false;
-  rememberMe = true;
   showPassword = false;
   errorMessage = '';
 
-  loginForm = this.fb.group({
+  loginForm = this.fb.nonNullable.group({
     email: ['', [Validators.required, Validators.email]],
-    password: ['', [Validators.required, Validators.minLength(6)]],
+    password: ['', [Validators.required, Validators.minLength(MIN_PASSWORD_LENGTH)]],
+    rememberMe: [true],
   });
 
   togglePasswordVisibility(): void {
     this.showPassword = !this.showPassword;
   }
 
+  /** Pesan error untuk satu kolom. String kosong jika valid atau belum disentuh. */
+  fieldError(field: LoginField): string {
+    const control = this.loginForm.controls[field];
+    if (!control.invalid || !control.touched) return '';
+
+    const errors = control.errors ?? {};
+    const messages = FIELD_MESSAGES[field];
+    const key = Object.keys(messages).find(errorKey => errors[errorKey]);
+    return key ? messages[key] : 'Nilai tidak valid.';
+  }
+
   onLoginHandler(): void {
+    if (this.isLoading) return;
+
     if (this.loginForm.invalid) {
       this.loginForm.markAllAsTouched();
       return;
@@ -47,22 +69,28 @@ export class BuyerLoginComponent {
 
     this.isLoading = true;
     this.errorMessage = '';
-    const formValue = this.loginForm.value;
 
+    const { email, password } = this.loginForm.getRawValue();
     const payload = {
-      email: (formValue.email ?? '').trim(),
-      password: formValue.password ?? '',
+      email: email.trim(),
+      password,
       role: 'Buyer' as const,
     };
 
+    // Cegah ubah isi form / submit ganda selama request berjalan.
+    this.loginForm.disable({ emitEvent: false });
+
     this.loginSvc.submitLogin(payload).subscribe({
       next: (response: any) => {
-        this.isLoading = false;
         if (!response?.token || response.user?.role !== payload.role) {
+          this.isLoading = false;
+          this.loginForm.enable({ emitEvent: false });
           this.errorMessage = 'Respons login tidak valid atau akun bukan Buyer.';
           this.cdr.detectChanges();
           return;
         }
+
+        this.isLoading = false;
         this.authSvc.setToken(response.token);
         this.authSvc.setUser(response.user);
         const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl') || '/';
@@ -70,6 +98,7 @@ export class BuyerLoginComponent {
       },
       error: (err) => {
         this.isLoading = false;
+        this.loginForm.enable({ emitEvent: false });
         this.errorMessage =
           err.status === 0
             ? 'Tidak dapat terhubung ke server. Coba lagi.'

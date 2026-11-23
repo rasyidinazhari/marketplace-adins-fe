@@ -63,11 +63,6 @@ export const routes: Routes = [
     title: 'Portal Mitra Penjual - WarungAdins'
   },
   {
-    path: 'login',
-    redirectTo: 'buyer/login',
-    pathMatch: 'full'
-  },
-  {
     path: 'register',
     canActivate: [loggedOutGuard],
     component: RegisterComponent,

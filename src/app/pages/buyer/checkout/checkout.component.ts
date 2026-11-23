@@ -2,7 +2,7 @@ import { Component, DestroyRef, OnInit, inject, ChangeDetectorRef } from '@angul
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterLink, Router } from '@angular/router';
-import { FormsModule } from '@angular/forms';
+import { FormBuilder, ReactiveFormsModule, ValidationErrors, ValidatorFn, AbstractControl, Validators } from '@angular/forms';
 import { TopNavbarComponent } from '../../../layout/top-navbar/top-navbar.component';
 import { CompactFooterComponent } from '../../../layout/compact-footer/compact-footer.component';
 import { ModalComponent } from '../../../components/ui/modal/modal.component';
@@ -17,6 +17,40 @@ import { SellerVoucher } from '../../../models/voucher.model';
 
 const CENTS_PER_RUPIAH = 100;
 
+// Aturan validasi alamat
+const DIGITS_ONLY = /^\d+$/;
+const PHONE_MIN_LENGTH = 9;
+const PHONE_MAX_LENGTH = 15;
+const POSTAL_CODE_LENGTH = 5;
+
+type AddressField = 'name' | 'phone' | 'city' | 'postalCode' | 'address';
+type DigitsField = 'phone' | 'postalCode';
+
+/** Tidak boleh kosong atau hanya spasi. */
+const notBlank: ValidatorFn = (control: AbstractControl): ValidationErrors | null =>
+  typeof control.value === 'string' && control.value.trim() === '' ? { required: true } : null;
+
+const ADDRESS_MESSAGES: Record<AddressField, Record<string, string>> = {
+  name: {
+    required: 'Nama penerima wajib diisi.',
+  },
+  phone: {
+    required: 'Nomor telepon wajib diisi.',
+    pattern: 'Nomor telepon hanya boleh berisi angka.',
+    minlength: `Nomor telepon harus ${PHONE_MIN_LENGTH}-${PHONE_MAX_LENGTH} digit.`,
+    maxlength: `Nomor telepon harus ${PHONE_MIN_LENGTH}-${PHONE_MAX_LENGTH} digit.`,
+  },
+  city: {},
+  postalCode: {
+    pattern: 'Kode pos hanya boleh berisi angka.',
+    minlength: `Kode pos harus ${POSTAL_CODE_LENGTH} digit.`,
+    maxlength: `Kode pos harus ${POSTAL_CODE_LENGTH} digit.`,
+  },
+  address: {
+    required: 'Alamat lengkap wajib diisi.',
+  },
+};
+
 export interface AddressItem {
   id: number;
   name: string;
@@ -24,8 +58,6 @@ export interface AddressItem {
   address: string;
   city: string;
   postalCode: string;
-  label: string;
-  isPrimary?: boolean;
 }
 
 export interface CheckoutItem {
@@ -44,7 +76,7 @@ interface CheckoutVoucher extends SellerVoucher {
 @Component({
   selector: 'app-checkout',
   standalone: true,
-  imports: [CommonModule, RouterLink, FormsModule, TopNavbarComponent, CompactFooterComponent, ModalComponent],
+  imports: [CommonModule, RouterLink, ReactiveFormsModule, TopNavbarComponent, CompactFooterComponent, ModalComponent],
   templateUrl: './checkout.component.html',
   styleUrl: './checkout.component.css'
 })
@@ -57,9 +89,13 @@ export class CheckoutComponent implements OnInit {
   private router = inject(Router);
   private route = inject(ActivatedRoute);
   private destroyRef = inject(DestroyRef);
+  private fb = inject(FormBuilder);
   private currentSubtotalInCents: number | null = null;
   private selectedVoucherId: number | null = null;
   private currentStoreId: number | null = null;
+
+  readonly phoneMaxLength = PHONE_MAX_LENGTH;
+  readonly postalCodeLength = POSTAL_CODE_LENGTH;
 
   currentStoreName = '';
   cartMessage = '';
@@ -69,11 +105,15 @@ export class CheckoutComponent implements OnInit {
   voucherLoadFailed = false;
   isVoucherModalOpen = false;
 
-  selectedCourier = 'reguler';
-  selectedPayment = 'bca_va';
   isProcessing = false;
   isLoadingCart = false;
   isLoadingAddress = false;
+
+  // Pilihan kurir & metode pembayaran
+  optionsForm = this.fb.nonNullable.group({
+    courier: ['reguler'],
+    payment: ['bca_va'],
+  });
 
   // Modal Ubah Alamat State
   isAddressModalOpen = false;
@@ -91,18 +131,26 @@ export class CheckoutComponent implements OnInit {
     address: 'Silakan pilih alamat pengiriman terlebih dahulu',
     city: '',
     postalCode: '',
-    label: '',
   };
 
-  newAddressForm = {
-    name: '',
-    phone: '',
-    label: 'Rumah',
-    city: '',
-    postalCode: '',
-    address: '',
-    isPrimary: false
-  };
+  // Form alamat baru
+  addressForm = this.fb.nonNullable.group({
+    name: ['', [Validators.required, notBlank]],
+    phone: ['', [
+      Validators.required,
+      Validators.pattern(DIGITS_ONLY),
+      Validators.minLength(PHONE_MIN_LENGTH),
+      Validators.maxLength(PHONE_MAX_LENGTH),
+    ]],
+    city: [''],
+    // Opsional, tetapi jika diisi harus 5 digit angka.
+    postalCode: ['', [
+      Validators.pattern(DIGITS_ONLY),
+      Validators.minLength(POSTAL_CODE_LENGTH),
+      Validators.maxLength(POSTAL_CODE_LENGTH),
+    ]],
+    address: ['', [Validators.required, notBlank]],
+  });
 
   couriers = [
     { id: 'reguler', name: 'JNE Reguler', eta: '2 - 3 Hari', price: 15000 },
@@ -118,9 +166,28 @@ export class CheckoutComponent implements OnInit {
 
   orderItems: CheckoutItem[] = [];
 
+  get selectedCourier(): string {
+    return this.optionsForm.controls.courier.value;
+  }
+
+  get selectedPayment(): string {
+    return this.optionsForm.controls.payment.value;
+  }
+
   ngOnInit(): void {
     this.loadCartData();
     this.loadAddresses();
+  }
+
+  // --- PILIHAN KURIR & PEMBAYARAN ---
+  selectCourier(id: string): void {
+    if (this.isProcessing) return;
+    this.optionsForm.controls.courier.setValue(id);
+  }
+
+  selectPayment(id: string): void {
+    if (this.isProcessing) return;
+    this.optionsForm.controls.payment.setValue(id);
   }
 
   // --- 1. FETCH CART ---
@@ -242,8 +309,6 @@ export class CheckoutComponent implements OnInit {
           address: a.fullAddress,
           city: a.city,
           postalCode: a.postalCode,
-          label: 'Alamat',
-          isPrimary: false
         }));
 
         if (this.savedAddresses.length > 0) {
@@ -371,41 +436,69 @@ export class CheckoutComponent implements OnInit {
 
   switchToNewAddress(): void {
     this.addressMode = 'form';
-    this.newAddressForm = {
-      name: '', phone: '', label: 'Rumah', city: '', postalCode: '', address: '', isPrimary: false
-    };
+    this.addressForm.reset();
   }
 
   switchToSelectAddress(): void {
     this.addressMode = 'select';
   }
 
+  // --- VALIDASI FORM ALAMAT ---
+
+  /** Hapus semua karakter non-angka saat user mengetik / paste. */
+  onDigitsInput(event: Event, field: DigitsField): void {
+    const input = event.target as HTMLInputElement;
+    const cleaned = input.value.replace(/\D/g, '');
+    if (input.value !== cleaned) {
+      input.value = cleaned;
+    }
+    this.addressForm.controls[field].setValue(cleaned);
+  }
+
+  /** Pesan error untuk satu kolom. String kosong jika valid atau belum disentuh. */
+  addressError(field: AddressField): string {
+    const control = this.addressForm.controls[field];
+    if (!control.invalid || !control.touched) return '';
+
+    const errors = control.errors ?? {};
+    const messages = ADDRESS_MESSAGES[field];
+    const key = Object.keys(messages).find(errorKey => errors[errorKey]);
+    return key ? messages[key] : 'Nilai tidak valid.';
+  }
+
   // --- SIMPAN ALAMAT BARU KE API ---
   saveNewAddress(): void {
-    if (!this.newAddressForm.name || !this.newAddressForm.phone || !this.newAddressForm.address) {
-      alert('Silakan lengkapi nama penerima, nomor telepon, dan alamat lengkap.');
+    if (this.isProcessing) return;
+
+    if (this.addressForm.invalid) {
+      this.addressForm.markAllAsTouched();
       return;
     }
 
+    const form = this.addressForm.getRawValue();
     const payload: AddressPayload = {
       userId: 1, // Abaikan
-      recipientName: this.newAddressForm.name,
-      phoneNumber: this.newAddressForm.phone,
-      city: this.newAddressForm.city || 'Jakarta',
-      postalCode: this.newAddressForm.postalCode || '10110',
-      note: this.newAddressForm.address
+      recipientName: form.name.trim(),
+      phoneNumber: form.phone,
+      city: form.city.trim() || 'Jakarta',
+      postalCode: form.postalCode || '10110',
+      note: form.address.trim()
     };
 
     this.isProcessing = true;
+    this.addressForm.disable({ emitEvent: false });
+
     this.addressSvc.createAddress(payload).subscribe({
-      next: (res) => {
+      next: () => {
         this.isProcessing = false;
+        this.addressForm.enable({ emitEvent: false });
         this.isAddressModalOpen = false;
         this.loadAddresses();
         alert('Alamat berhasil ditambahkan!');
       },
       error: (err) => {
         this.isProcessing = false;
+        this.addressForm.enable({ emitEvent: false });
         console.error('Gagal menyimpan alamat', err);
         alert('Gagal menyimpan alamat. Pastikan Anda sudah login.');
       }

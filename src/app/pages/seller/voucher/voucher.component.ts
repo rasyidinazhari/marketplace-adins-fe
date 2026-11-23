@@ -1,8 +1,14 @@
-import { DecimalPipe } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, DestroyRef, OnInit, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
+import {
+  AbstractControl,
+  FormBuilder,
+  ReactiveFormsModule,
+  ValidationErrors,
+  ValidatorFn,
+  Validators,
+} from '@angular/forms';
 import { Subject, catchError, of, switchMap } from 'rxjs';
 import { ModalComponent } from '../../../components/ui/modal/modal.component';
 import { StoreSummary } from '../../../models/product.model';
@@ -11,10 +17,53 @@ import { ProductService } from '../../../services/product/product.service';
 import { SellerStoreScopeService } from '../../../services/store/seller-store-scope.service';
 import { VoucherService } from '../../../services/voucher/voucher.service';
 
+const MAX_VOUCHER_AMOUNT = 2_147_483_647;
+const MAX_CODE_LENGTH = 100;
+
+const rupiahFormatter = new Intl.NumberFormat('id-ID', { maximumFractionDigits: 0 });
+
+type RupiahField = 'minPurchaseAmount' | 'maxDiscountAmount';
+type VoucherField = 'code' | 'discountPercentage' | RupiahField;
+
+/** Tidak boleh kosong atau hanya spasi. */
+const notBlank: ValidatorFn = (control: AbstractControl): ValidationErrors | null =>
+  typeof control.value === 'string' && control.value.trim() === '' ? { required: true } : null;
+
+/** Harus bilangan bulat (null dibiarkan, ditangani Validators.required). */
+const integerOnly: ValidatorFn = (control: AbstractControl): ValidationErrors | null => {
+  const value = control.value;
+  return value === null || value === '' || Number.isInteger(value) ? null : { integer: true };
+};
+
+const FIELD_MESSAGES: Record<VoucherField, Record<string, string>> = {
+  code: {
+    required: 'Kode voucher wajib diisi.',
+    maxlength: `Kode voucher maksimal ${MAX_CODE_LENGTH} karakter.`,
+  },
+  discountPercentage: {
+    required: 'Diskon wajib diisi.',
+    integer: 'Diskon harus berupa bilangan bulat.',
+    min: 'Diskon minimal 1%.',
+    max: 'Diskon maksimal 100%.',
+  },
+  minPurchaseAmount: {
+    required: 'Minimum belanja wajib diisi.',
+    integer: 'Minimum belanja harus berupa bilangan bulat.',
+    min: 'Minimum belanja tidak boleh negatif.',
+    max: 'Minimum belanja maksimal Rp 2.147.483.647.',
+  },
+  maxDiscountAmount: {
+    required: 'Maksimum potongan wajib diisi.',
+    integer: 'Maksimum potongan harus berupa bilangan bulat.',
+    min: 'Maksimum potongan minimal Rp 1.',
+    max: 'Maksimum potongan maksimal Rp 2.147.483.647.',
+  },
+};
+
 @Component({
   selector: 'app-voucher',
   standalone: true,
-  imports: [DecimalPipe, ReactiveFormsModule, ModalComponent],
+  imports: [ReactiveFormsModule, ModalComponent],
   templateUrl: './voucher.component.html',
   styleUrl: './voucher.component.css',
 })
@@ -26,13 +75,35 @@ export class VoucherComponent implements OnInit {
   private dashboardStoreControl = inject(SellerStoreScopeService, { optional: true })?.storeControl;
   private voucherRequests = new Subject<number | null>();
 
-  maxVoucherAmount = 2_147_483_647;
+  readonly maxVoucherAmount = MAX_VOUCHER_AMOUNT;
+  readonly maxCodeLength = MAX_CODE_LENGTH;
+
   storeControl = this.formBuilder.control<number | null>(null);
+
   voucherForm = this.formBuilder.group({
-    code: this.formBuilder.nonNullable.control(''),
-    discountPercentage: this.formBuilder.control<number | null>(null),
-    minPurchaseAmount: this.formBuilder.control<number | null>(0),
-    maxDiscountAmount: this.formBuilder.control<number | null>(null),
+    code: this.formBuilder.nonNullable.control('', [
+      Validators.required,
+      notBlank,
+      Validators.maxLength(MAX_CODE_LENGTH),
+    ]),
+    discountPercentage: this.formBuilder.control<number | null>(null, [
+      Validators.required,
+      integerOnly,
+      Validators.min(1),
+      Validators.max(100),
+    ]),
+    minPurchaseAmount: this.formBuilder.control<number | null>(0, [
+      Validators.required,
+      integerOnly,
+      Validators.min(0),
+      Validators.max(MAX_VOUCHER_AMOUNT),
+    ]),
+    maxDiscountAmount: this.formBuilder.control<number | null>(null, [
+      Validators.required,
+      integerOnly,
+      Validators.min(1),
+      Validators.max(MAX_VOUCHER_AMOUNT),
+    ]),
   });
 
   stores: StoreSummary[] = [];
@@ -114,11 +185,74 @@ export class VoucherComponent implements OnInit {
     return this.vouchers.filter(voucher => voucher.isActive).length;
   }
 
+  // --- FORMAT RUPIAH ---
+
+  /** 1500000 -> "1.500.000". Null -> string kosong. */
+  formatRupiah(value: number | null | undefined): string {
+    return value === null || value === undefined ? '' : rupiahFormatter.format(value);
+  }
+
+  /**
+   * Dipanggil setiap user mengetik di kolom rupiah.
+   * - Buang semua karakter non-angka
+   * - Simpan nilai number murni ke form control (validator ikut jalan)
+   * - Tampilkan ulang dengan pemisah ribuan, posisi kursor dijaga
+   */
+  onRupiahInput(event: Event, field: RupiahField): void {
+    const input = event.target as HTMLInputElement;
+    const caret = input.selectionStart ?? input.value.length;
+    const digitsBeforeCaret = input.value.slice(0, caret).replace(/\D/g, '').length;
+
+    let digits = input.value.replace(/\D/g, '').replace(/^0+(?=\d)/, '');
+    while (digits && Number(digits) > MAX_VOUCHER_AMOUNT) {
+      digits = digits.slice(0, -1);
+    }
+
+    const value = digits ? Number(digits) : null;
+    const formatted = this.formatRupiah(value);
+
+    this.voucherForm.controls[field].setValue(value);
+    input.value = formatted;
+
+    // Kembalikan kursor ke posisi digit yang sama
+    let position = 0;
+    let digitCount = 0;
+    while (position < formatted.length && digitCount < digitsBeforeCaret) {
+      if (/\d/.test(formatted[position])) digitCount++;
+      position++;
+    }
+    input.setSelectionRange(position, position);
+  }
+
+  // --- VALIDASI FORM ---
+
+  /** Pesan error untuk satu kolom. String kosong jika valid atau belum disentuh. */
+  fieldError(field: VoucherField): string {
+    const control = this.voucherForm.controls[field];
+    if (!control.invalid || !control.touched) return '';
+
+    const errors = control.errors ?? {};
+    const messages = FIELD_MESSAGES[field];
+    const key = Object.keys(messages).find(errorKey => errors[errorKey]);
+    return key ? messages[key] : 'Nilai tidak valid.';
+  }
+
+  markTouched(field: VoucherField): void {
+    this.voucherForm.controls[field].markAsTouched();
+  }
+
+  // --- AKSI ---
+
   openCreateModal(): void {
     if (!this.canManageVouchers || this.isCreateModalOpen) return;
 
     this.createError = '';
-    this.voucherForm.reset({ minPurchaseAmount: 0 });
+    this.voucherForm.reset({
+      code: '',
+      discountPercentage: null,
+      minPurchaseAmount: 0,
+      maxDiscountAmount: null,
+    });
     this.isCreateModalOpen = true;
   }
 
@@ -127,6 +261,11 @@ export class VoucherComponent implements OnInit {
     if (storeId === null || !this.canManageVouchers || !this.isCreateModalOpen) return;
 
     this.createError = '';
+    if (this.voucherForm.invalid) {
+      this.voucherForm.markAllAsTouched();
+      return;
+    }
+
     const payload = this.buildVoucherPayload();
     if (!payload) return;
 
@@ -188,33 +327,14 @@ export class VoucherComponent implements OnInit {
   }
 
   private buildVoucherPayload(): CreateVoucherPayload | null {
-    const form = this.voucherForm.getRawValue();
-    const code = form.code.trim();
-    const { discountPercentage, minPurchaseAmount, maxDiscountAmount } = form;
+    const { code, discountPercentage, minPurchaseAmount, maxDiscountAmount } = this.voucherForm.getRawValue();
 
-    if (!code || code.length > 100) {
-      return this.invalidForm('Kode voucher wajib diisi dan maksimal 100 karakter.');
-    }
-    if (!this.isIntegerInRange(discountPercentage, 1, 100)) {
-      return this.invalidForm('Diskon harus berupa bilangan bulat dari 1 sampai 100%.');
-    }
-    if (!this.isIntegerInRange(minPurchaseAmount, 0, this.maxVoucherAmount)) {
-      return this.invalidForm('Minimum belanja harus berupa bilangan bulat dari Rp 0 sampai Rp 2.147.483.647.');
-    }
-    if (!this.isIntegerInRange(maxDiscountAmount, 1, this.maxVoucherAmount)) {
-      return this.invalidForm('Maksimum potongan harus berupa bilangan bulat dari Rp 1 sampai Rp 2.147.483.647.');
+    // Sudah divalidasi Validators; pengecekan ini hanya untuk narrowing tipe.
+    if (discountPercentage === null || minPurchaseAmount === null || maxDiscountAmount === null) {
+      return null;
     }
 
-    return { code, discountPercentage, minPurchaseAmount, maxDiscountAmount };
-  }
-
-  private isIntegerInRange(value: number | null, min: number, max: number): value is number {
-    return value !== null && Number.isInteger(value) && value >= min && value <= max;
-  }
-
-  private invalidForm(message: string): null {
-    this.createError = message;
-    return null;
+    return { code: code.trim(), discountPercentage, minPurchaseAmount, maxDiscountAmount };
   }
 
   private canModifyVoucher(voucher: SellerVoucher): boolean {

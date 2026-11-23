@@ -21,10 +21,10 @@
 
     <!-- Role Selection Tabs (Shadcn style) -->
     <div class="grid grid-cols-2 gap-2 p-1 rounded-lg bg-zinc-100 border border-zinc-200/60 mb-6 text-xs font-medium">
-      <button type="button" (click)="selectRole('Buyer')" [class.bg-white]="role === 'Buyer'"
+      <button type="button" (click)="selectRole('Buyer')" [disabled]="isLoading" [class.bg-white]="role === 'Buyer'"
         [class.text-zinc-950]="role === 'Buyer'" [class.shadow-2xs]="role === 'Buyer'"
         [class.font-semibold]="role === 'Buyer'"
-        class="py-2.5 rounded-md transition-all text-zinc-600 flex items-center justify-center gap-2 cursor-pointer">
+        class="py-2.5 rounded-md transition-all text-zinc-600 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50">
         <svg class="w-4 h-4 text-zinc-600" [class.text-zinc-950]="role === 'Buyer'" fill="none" stroke="currentColor"
           viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -32,10 +32,10 @@
         </svg>
         <span>Sebagai Pembeli</span>
       </button>
-      <button type="button" (click)="selectRole('Seller')" [class.bg-white]="role === 'Seller'"
+      <button type="button" (click)="selectRole('Seller')" [disabled]="isLoading" [class.bg-white]="role === 'Seller'"
         [class.text-zinc-950]="role === 'Seller'" [class.shadow-2xs]="role === 'Seller'"
         [class.font-semibold]="role === 'Seller'"
-        class="py-2.5 rounded-md transition-all text-zinc-600 flex items-center justify-center gap-2 cursor-pointer">
+        class="py-2.5 rounded-md transition-all text-zinc-600 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50">
         <svg class="w-4 h-4 text-zinc-600" [class.text-zinc-950]="role === 'Seller'" fill="none" stroke="currentColor"
           viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -47,70 +47,109 @@
 
     <!-- Error Banner -->
     @if (errorMessage) {
-    <div class="mb-4 p-3 rounded-md bg-red-50 border border-red-200 text-xs text-red-600">
+    <div role="alert" class="mb-4 p-3 rounded-md bg-red-50 border border-red-200 text-xs text-red-600">
       {{ errorMessage }}
     </div>
     }
 
     <!-- Success Banner -->
     @if (successMessage) {
-    <div class="mb-4 p-3 rounded-md bg-emerald-50 border border-emerald-200 text-xs text-emerald-700 font-medium">
+    <div role="status" class="mb-4 p-3 rounded-md bg-emerald-50 border border-emerald-200 text-xs text-emerald-700 font-medium">
       {{ successMessage }}
     </div>
     }
 
     <!-- Form -->
-    <form (ngSubmit)="onSubmit()" class="space-y-4">
+    <form [formGroup]="registerForm" (ngSubmit)="onSubmit()" novalidate class="space-y-4">
 
       <!-- Full name or store owner name -->
       <div class="space-y-1.5">
-        <label class="text-xs font-semibold text-zinc-800">
+        <label for="reg-fullname" class="text-xs font-semibold text-zinc-800">
           {{ role === 'Buyer' ? 'Nama Lengkap' : 'Nama Pemilik Toko' }}
         </label>
-        <input type="text" [(ngModel)]="fullName" name="fullName" placeholder="Contoh: Budi Santoso" required
-          class="flex h-10 w-full rounded-md border border-zinc-200 bg-transparent px-3 py-2 text-sm shadow-2xs placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-950" />
+        <input id="reg-fullname" type="text" formControlName="fullName" autocomplete="name"
+          placeholder="Contoh: Budi Santoso"
+          [attr.aria-invalid]="fieldError('fullName') ? true : null"
+          [class.border-red-500]="fieldError('fullName')"
+          [class.border-zinc-200]="!fieldError('fullName')"
+          class="flex h-10 w-full rounded-md border bg-transparent px-3 py-2 text-sm shadow-2xs placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-950" />
+        @if (fieldError('fullName'); as message) {
+        <p role="alert" class="text-[11px] text-red-600">{{ message }}</p>
+        }
       </div>
 
       <!-- If seller, store name -->
       @if (role === 'Seller') {
       <div class="space-y-1.5">
-        <label class="text-xs font-semibold text-zinc-800">Nama Toko Resmi</label>
-        <input type="text" [(ngModel)]="storeName" name="storeName"
-          placeholder="Contoh: Adins Gadget Official (min. 5 karakter)" required
-          class="flex h-10 w-full rounded-md border border-zinc-200 bg-transparent px-3 py-2 text-sm shadow-2xs placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-950" />
+        <label for="reg-storename" class="text-xs font-semibold text-zinc-800">Nama Toko Resmi</label>
+        <input id="reg-storename" type="text" formControlName="storeName"
+          placeholder="Contoh: Adins Gadget Official (min. 5 karakter)"
+          [attr.aria-invalid]="fieldError('storeName') ? true : null"
+          [class.border-red-500]="fieldError('storeName')"
+          [class.border-zinc-200]="!fieldError('storeName')"
+          class="flex h-10 w-full rounded-md border bg-transparent px-3 py-2 text-sm shadow-2xs placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-950" />
+        @if (fieldError('storeName'); as message) {
+        <p role="alert" class="text-[11px] text-red-600">{{ message }}</p>
+        }
       </div>
       }
 
       <!-- Email -->
       <div class="space-y-1.5">
-        <label class="text-xs font-semibold text-zinc-800">Email</label>
-        <input type="email" [(ngModel)]="email" name="email" placeholder="nama@email.com" required
-          class="flex h-10 w-full rounded-md border border-zinc-200 bg-transparent px-3 py-2 text-sm shadow-2xs placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-950" />
+        <label for="reg-email" class="text-xs font-semibold text-zinc-800">Email</label>
+        <input id="reg-email" type="email" formControlName="email" autocomplete="email"
+          placeholder="nama@email.com"
+          [attr.aria-invalid]="fieldError('email') ? true : null"
+          [class.border-red-500]="fieldError('email')"
+          [class.border-zinc-200]="!fieldError('email')"
+          class="flex h-10 w-full rounded-md border bg-transparent px-3 py-2 text-sm shadow-2xs placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-950" />
+        @if (fieldError('email'); as message) {
+        <p role="alert" class="text-[11px] text-red-600">{{ message }}</p>
+        }
       </div>
 
       <!-- Password & Confirm -->
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div class="space-y-1.5">
-          <label class="text-xs font-semibold text-zinc-800">Kata Sandi</label>
-          <input type="password" [(ngModel)]="password" name="password" placeholder="Min. 6 karakter" required
-            class="flex h-10 w-full rounded-md border border-zinc-200 bg-transparent px-3 py-2 text-sm shadow-2xs placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-950" />
+          <label for="reg-password" class="text-xs font-semibold text-zinc-800">Kata Sandi</label>
+          <input id="reg-password" type="password" formControlName="password" autocomplete="new-password"
+            [placeholder]="'Min. ' + minPasswordLength + ' karakter'"
+            [attr.aria-invalid]="fieldError('password') ? true : null"
+            [class.border-red-500]="fieldError('password')"
+            [class.border-zinc-200]="!fieldError('password')"
+            class="flex h-10 w-full rounded-md border bg-transparent px-3 py-2 text-sm shadow-2xs placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-950" />
+          @if (fieldError('password'); as message) {
+          <p role="alert" class="text-[11px] text-red-600">{{ message }}</p>
+          }
         </div>
         <div class="space-y-1.5">
-          <label class="text-xs font-semibold text-zinc-800">Ulangi Sandi</label>
-          <input type="password" [(ngModel)]="confirmPassword" name="confirmPassword" placeholder="Ulangi sandi"
-            required
-            class="flex h-10 w-full rounded-md border border-zinc-200 bg-transparent px-3 py-2 text-sm shadow-2xs placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-950" />
+          <label for="reg-confirm" class="text-xs font-semibold text-zinc-800">Ulangi Sandi</label>
+          <input id="reg-confirm" type="password" formControlName="confirmPassword" autocomplete="new-password"
+            placeholder="Ulangi sandi"
+            [attr.aria-invalid]="fieldError('confirmPassword') ? true : null"
+            [class.border-red-500]="fieldError('confirmPassword')"
+            [class.border-zinc-200]="!fieldError('confirmPassword')"
+            class="flex h-10 w-full rounded-md border bg-transparent px-3 py-2 text-sm shadow-2xs placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-zinc-950" />
+          @if (fieldError('confirmPassword'); as message) {
+          <p role="alert" class="text-[11px] text-red-600">{{ message }}</p>
+          }
         </div>
       </div>
 
       <!-- Terms Checkbox -->
-      <div class="flex items-start gap-2 pt-1">
-        <input type="checkbox" id="agree" [(ngModel)]="agreeTerms" name="agreeTerms" required
-          class="mt-0.5 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-950 h-4 w-4" />
-        <label for="agree" class="text-xs text-zinc-600 select-none cursor-pointer leading-relaxed">
-          Saya menyetujui <a href="#" class="underline text-zinc-950">Syarat & Ketentuan</a> serta <a href="#"
-            class="underline text-zinc-950">Kebijakan Privasi</a> WarungAdins.
-        </label>
+      <div class="pt-1">
+        <div class="flex items-start gap-2">
+          <input type="checkbox" id="agree" formControlName="agreeTerms"
+            [attr.aria-invalid]="fieldError('agreeTerms') ? true : null"
+            class="mt-0.5 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-950 h-4 w-4" />
+          <label for="agree" class="text-xs text-zinc-600 select-none cursor-pointer leading-relaxed">
+            Saya menyetujui <a href="#" class="underline text-zinc-950">Syarat & Ketentuan</a> serta <a href="#"
+              class="underline text-zinc-950">Kebijakan Privasi</a> WarungAdins.
+          </label>
+        </div>
+        @if (fieldError('agreeTerms'); as message) {
+        <p role="alert" class="mt-1 text-[11px] text-red-600">{{ message }}</p>
+        }
       </div>
 
       <!-- Submit button -->
