@@ -24,6 +24,9 @@ export interface BackendProduct {
   productDescription?: string;
   productPrice: number;
   productStock: number;
+  rating?: number;
+  salesCount?: number;
+  totalReviews?: number;
   isActive?: boolean;
   createdAt?: string;
   updatedAt?: string;
