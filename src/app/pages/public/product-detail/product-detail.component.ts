@@ -363,7 +363,10 @@ export class PublicProductDetailComponent implements OnInit {
     this.cartSvc.addItemToCart(payload).subscribe({
       next: (res) => {
         this.isBuyingNow = false;
-        this.router.navigate(['/checkout'], { queryParams: { storeId: res?.storeId } });
+        if (res && res.id) {
+          this.cartSvc.setSelectedCartItemIds([res.id]);
+        }
+        this.router.navigate(['/checkout']);
       },
       error: (err) => {
         this.isBuyingNow = false;

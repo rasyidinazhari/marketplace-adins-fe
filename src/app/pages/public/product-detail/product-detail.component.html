@@ -294,9 +294,25 @@
           class="w-full inline-flex items-center justify-center gap-2 rounded-md border border-zinc-300 bg-white px-5 py-3 text-sm font-semibold text-zinc-900 shadow-2xs hover:bg-zinc-50 transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
         >
           @if (isAddingToCart) {
-            <svg class="animate-spin h-4 w-4 text-zinc-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+            <svg
+              class="animate-spin h-4 w-4 text-zinc-700"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                class="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                stroke-width="4"
+              ></circle>
+              <path
+                class="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8v8H4z"
+              ></path>
             </svg>
             <span>Menambahkan...</span>
           } @else {
@@ -313,7 +329,9 @@
                 d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
               />
             </svg>
-            <span>{{ product.stock <= 0 ? 'Stok Habis' : '+ Tambah ke Keranjang' }}</span>
+            <span>{{
+              product.stock <= 0 ? "Stok Habis" : "+ Tambah ke Keranjang"
+            }}</span>
           }
         </button>
 
@@ -323,9 +341,25 @@
           class="w-full inline-flex items-center justify-center gap-2 rounded-md bg-zinc-900 px-5 py-3 text-sm font-semibold text-zinc-50 shadow-sm hover:bg-zinc-800 transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
         >
           @if (isBuyingNow) {
-            <svg class="animate-spin h-4 w-4 text-zinc-100" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+            <svg
+              class="animate-spin h-4 w-4 text-zinc-100"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                class="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                stroke-width="4"
+              ></circle>
+              <path
+                class="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8v8H4z"
+              ></path>
             </svg>
             <span>Memproses...</span>
           } @else {
@@ -633,7 +667,7 @@
   </div>
 
   <!-- Related Products (Shadcn style cards) -->
-  <div class="mt-16 space-y-6">
+  <!-- <div class="mt-16 space-y-6">
     <div
       class="flex items-center justify-between pb-4 border-b border-zinc-200"
     >
@@ -691,7 +725,7 @@
         </a>
       }
     </div>
-  </div>
+  </div> -->
 
   <!-- Floating Cart Success Notification (Option A: Tokopedia / Shopee Style) -->
   @if (showCartSuccessToast) {
@@ -699,28 +733,58 @@
       class="fixed bottom-6 right-6 z-50 max-w-sm sm:max-w-md w-full bg-white rounded-2xl border border-zinc-200 shadow-2xl p-4 transition-all duration-300"
     >
       <div class="flex items-start gap-3">
-        <div class="h-9 w-9 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+        <div
+          class="h-9 w-9 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5"
+        >
+          <svg
+            class="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2.5"
+              d="M5 13l4 4L19 7"
+            />
           </svg>
         </div>
         <div class="flex-1 min-w-0">
           <div class="flex items-center justify-between">
-            <h4 class="text-sm font-bold text-zinc-950">Berhasil Masuk Keranjang!</h4>
+            <h4 class="text-sm font-bold text-zinc-950">
+              Berhasil Masuk Keranjang!
+            </h4>
             <button
               (click)="closeCartToast()"
               class="text-zinc-400 hover:text-zinc-700 transition-colors p-1 -mr-1"
               title="Tutup"
             >
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              <svg
+                class="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M6 18L18 6M6 6l12 12"
+                />
               </svg>
             </button>
           </div>
-          <p class="text-xs text-zinc-600 mt-1 line-clamp-1 font-medium">{{ product.name }}</p>
-          <p class="text-xs text-zinc-400 mt-0.5">{{ quantity }} barang • Total Rp {{ totalPrice | number: '1.0-0' }}</p>
-          
-          <div class="flex items-center gap-2 mt-3 pt-2 border-t border-zinc-100">
+          <p class="text-xs text-zinc-600 mt-1 line-clamp-1 font-medium">
+            {{ product.name }}
+          </p>
+          <p class="text-xs text-zinc-400 mt-0.5">
+            {{ quantity }} barang • Total Rp {{ totalPrice | number: "1.0-0" }}
+          </p>
+
+          <div
+            class="flex items-center gap-2 mt-3 pt-2 border-t border-zinc-100"
+          >
             <a
               [routerLink]="'/cart'"
               class="flex-1 text-center py-2 px-3 rounded-lg bg-zinc-950 hover:bg-zinc-800 text-white text-xs font-semibold shadow-xs transition-colors"
@@ -741,16 +805,33 @@
 
   <!-- Auth Required Modal Dialog -->
   @if (showAuthModal) {
-    <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-950/60 backdrop-blur-xs">
-      <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-zinc-200 text-center">
-        <div class="mx-auto w-12 h-12 rounded-full bg-zinc-100 flex items-center justify-center text-zinc-700 mb-4">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+    <div
+      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-950/60 backdrop-blur-xs"
+    >
+      <div
+        class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-zinc-200 text-center"
+      >
+        <div
+          class="mx-auto w-12 h-12 rounded-full bg-zinc-100 flex items-center justify-center text-zinc-700 mb-4"
+        >
+          <svg
+            class="w-6 h-6"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+            />
           </svg>
         </div>
         <h3 class="text-base font-bold text-zinc-950">Masuk Terlebih Dahulu</h3>
         <p class="text-xs text-zinc-500 mt-1.5 leading-relaxed">
-          Silakan masuk ke akun pembeli Anda untuk menambahkan barang ke keranjang atau melanjutkan transaksi belanja.
+          Silakan masuk ke akun pembeli Anda untuk menambahkan barang ke
+          keranjang atau melanjutkan transaksi belanja.
         </p>
         <div class="mt-5 space-y-2">
           <button
@@ -772,16 +853,36 @@
 
   <!-- Seller Role Warning Modal -->
   @if (showSellerWarningModal) {
-    <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-950/60 backdrop-blur-xs">
-      <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-zinc-200 text-center">
-        <div class="mx-auto w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 mb-4">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+    <div
+      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-950/60 backdrop-blur-xs"
+    >
+      <div
+        class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-zinc-200 text-center"
+      >
+        <div
+          class="mx-auto w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 mb-4"
+        >
+          <svg
+            class="w-6 h-6"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+            />
           </svg>
         </div>
-        <h3 class="text-base font-bold text-zinc-950">Akun Penjual Terdeteksi</h3>
+        <h3 class="text-base font-bold text-zinc-950">
+          Akun Penjual Terdeteksi
+        </h3>
         <p class="text-xs text-zinc-500 mt-1.5 leading-relaxed">
-          Akun Anda terdaftar sebagai Mitra Penjual (Seller). Penjual tidak dapat melakukan pembelian produk. Silakan gunakan akun Pembeli untuk berbelanja.
+          Akun Anda terdaftar sebagai Mitra Penjual (Seller). Penjual tidak
+          dapat melakukan pembelian produk. Silakan gunakan akun Pembeli untuk
+          berbelanja.
         </p>
         <div class="mt-5">
           <button
