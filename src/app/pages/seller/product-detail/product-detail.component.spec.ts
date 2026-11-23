@@ -114,10 +114,10 @@ describe('ProductDetailComponent', () => {
       .toEqual([true, true]);
     expect(view.textContent).toContain('Toko Seller');
 
-    enter('product-price', '3000');
+    enter('product-price', '3.000,50');
     submit();
     const update = http.expectOne({ method: 'PUT', url: `${apiUrl}/products/21` });
-    expect(update.request.body).toEqual({ productPrice: 3000 });
+    expect(update.request.body).toEqual({ productPrice: 3000.5 });
     update.flush({});
     expect(navigate).toHaveBeenCalledWith(['/seller/products']);
   }));

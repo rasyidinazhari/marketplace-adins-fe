@@ -6,6 +6,9 @@ import { TopNavbarComponent } from '../../../layout/top-navbar/top-navbar.compon
 import { CompactFooterComponent } from '../../../layout/compact-footer/compact-footer.component';
 import { ProductService } from '../../../services/product/product.service';
 import { ReviewService } from '../../../services/review/review.service';
+import { CartService } from '../../../services/cart/cart.service';
+import { AuthService } from '../../../services/auth/auth.service';
+import { CartItemPayload } from '../../../models/cart.model';
 import { ProductReview, ReviewStats } from '../../../models/review.model';
 
 export interface ProductDetailData {
@@ -59,13 +62,22 @@ export class PublicProductDetailComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private productSvc = inject(ProductService);
   private reviewSvc = inject(ReviewService);
+  private cartSvc = inject(CartService);
+  private authSvc = inject(AuthService);
 
   selectedImageIndex = 0;
   selectedColor = 'Midnight Black';
   quantity = 1;
   activeTab: 'deskripsi' | 'spesifikasi' | 'ulasan' = 'deskripsi';
   isWishlisted = false;
-  addedToCartFeedback = false;
+
+  // Cart & Purchase States
+  isAddingToCart = false;
+  isBuyingNow = false;
+  showCartSuccessToast = false;
+  showAuthModal = false;
+  showSellerWarningModal = false;
+  private toastTimer: any = null;
 
   // Review state (read-only testimonials)
   reviews: ProductReview[] = [];
@@ -223,11 +235,56 @@ export class PublicProductDetailComponent implements OnInit {
           }
           this.product.images = [this.productSvc.getProductImage(data)];
           this.selectedImageIndex = 0;
+
+          // Sinkronkan penjualan dan rating dari database
+          if (data.salesCount !== undefined) {
+            this.product.salesCount = data.salesCount;
+          }
+          if (data.rating !== undefined) {
+            this.product.rating = data.rating;
+          }
+          if (data.totalReviews !== undefined) {
+            this.product.ratingCount = data.totalReviews;
+          }
+
+          const catId = data.productCategories?.[0]?.categoryId || data.categories?.[0]?.id;
+          this.loadRelatedProducts(data.id, catId);
         }
       },
       error: (err) => {
         console.warn('Gagal memuat produk dari API, fallback ke default detail:', err);
       }
+    });
+  }
+
+  loadRelatedProducts(currentId: number, categoryId?: number): void {
+    this.productSvc.getProducts('', 1, 8, categoryId || 0).subscribe({
+      next: (apiProducts) => {
+        if (apiProducts && apiProducts.length > 0) {
+          const filtered = apiProducts
+            .filter((p) => p.id !== currentId)
+            .slice(0, 4)
+            .map((p) => ({
+              id: p.id,
+              name: p.productName,
+              category:
+                p.categories?.[0]?.categoryName ||
+                p.productCategories?.[0]?.category?.categoryName ||
+                'Elektronik',
+              price: p.productPrice,
+              originalPrice: undefined,
+              rating: p.rating ?? 0,
+              salesCount: p.salesCount ?? 0,
+              image: this.productSvc.getProductImage(p),
+            }));
+          if (filtered.length > 0) {
+            this.relatedProducts = filtered;
+          }
+        }
+      },
+      error: (err) => {
+        console.warn('Gagal memuat related products:', err);
+      },
     });
   }
 
@@ -247,15 +304,119 @@ export class PublicProductDetailComponent implements OnInit {
   }
 
   addToCart(): void {
-    this.addedToCartFeedback = true;
-    setTimeout(() => {
-      this.addedToCartFeedback = false;
-      this.router.navigate(['/cart']);
-    }, 700);
+    if (!this.checkAuthAndRole()) return;
+
+    if (this.product.stock <= 0) {
+      alert('Maaf, stok produk ini sedang habis.');
+      return;
+    }
+
+    if (this.quantity > this.product.stock) {
+      alert(`Jumlah pembelian melebihi stok tersedia (${this.product.stock}).`);
+      return;
+    }
+
+    this.isAddingToCart = true;
+    const user = this.authSvc.getUser();
+    const payload: CartItemPayload = {
+      userId: user?.id ?? 0,
+      productId: this.product.id,
+      quantity: this.quantity,
+      totalPrice: this.totalPrice,
+    };
+
+    this.cartSvc.addItemToCart(payload).subscribe({
+      next: () => {
+        this.isAddingToCart = false;
+        this.showToast();
+      },
+      error: (err) => {
+        this.isAddingToCart = false;
+        console.error('Gagal menambahkan ke keranjang:', err);
+        alert('Gagal menambahkan produk ke keranjang. Silakan coba lagi.');
+      },
+    });
   }
 
   buyNow(): void {
-    this.router.navigate(['/checkout']);
+    if (!this.checkAuthAndRole()) return;
+
+    if (this.product.stock <= 0) {
+      alert('Maaf, stok produk ini sedang habis.');
+      return;
+    }
+
+    if (this.quantity > this.product.stock) {
+      alert(`Jumlah pembelian melebihi stok tersedia (${this.product.stock}).`);
+      return;
+    }
+
+    this.isBuyingNow = true;
+    const user = this.authSvc.getUser();
+    const payload: CartItemPayload = {
+      userId: user?.id ?? 0,
+      productId: this.product.id,
+      quantity: this.quantity,
+      totalPrice: this.totalPrice,
+    };
+
+    this.cartSvc.addItemToCart(payload).subscribe({
+      next: (res) => {
+        this.isBuyingNow = false;
+        this.router.navigate(['/checkout'], { queryParams: { storeId: res?.storeId } });
+      },
+      error: (err) => {
+        this.isBuyingNow = false;
+        console.error('Gagal memproses Beli Sekarang:', err);
+        alert('Gagal memproses pembelian. Silakan coba lagi.');
+      },
+    });
+  }
+
+  private checkAuthAndRole(): boolean {
+    if (!this.authSvc.getToken() || !this.authSvc.getCurrentRole()) {
+      this.showAuthModal = true;
+      return false;
+    }
+
+    if (this.authSvc.getCurrentRole() === 'Seller') {
+      this.showSellerWarningModal = true;
+      return false;
+    }
+
+    return true;
+  }
+
+  showToast(): void {
+    this.showCartSuccessToast = true;
+    if (this.toastTimer) {
+      clearTimeout(this.toastTimer);
+    }
+    this.toastTimer = setTimeout(() => {
+      this.showCartSuccessToast = false;
+    }, 6000);
+  }
+
+  closeCartToast(): void {
+    this.showCartSuccessToast = false;
+    if (this.toastTimer) {
+      clearTimeout(this.toastTimer);
+    }
+  }
+
+  closeAuthModal(): void {
+    this.showAuthModal = false;
+  }
+
+  navigateToLogin(): void {
+    this.showAuthModal = false;
+    this.router.navigate(['/login'], {
+      queryParams: { returnUrl: `/products/${this.product.id}` },
+    });
+  }
+
+  closeSellerWarningModal(): void {
+    this.showSellerWarningModal = false;
   }
 
   loadReviews(productId: number): void {
@@ -264,10 +425,8 @@ export class PublicProductDetailComponent implements OnInit {
       next: (data) => {
         this.reviews = data;
         this.reviewStats = this.reviewSvc.calculateStats(data);
-        if (data.length > 0) {
-          this.product.rating = this.reviewStats.averageRating;
-          this.product.ratingCount = this.reviewStats.totalReviews;
-        }
+        this.product.rating = this.reviewStats.averageRating;
+        this.product.ratingCount = this.reviewStats.totalReviews;
         this.isLoadingReviews = false;
       },
       error: (err) => {

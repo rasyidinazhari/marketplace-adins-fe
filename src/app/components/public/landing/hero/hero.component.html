@@ -98,7 +98,13 @@
         class="p-4 rounded-xl border border-zinc-200/80 bg-white/80 shadow-2xs"
       >
         <div class="text-xs font-medium text-zinc-500">Katalog Produk</div>
-        <div class="text-xl font-bold text-zinc-900 mt-1">10,000+</div>
+        <div class="text-xl font-bold text-zinc-900 mt-1 min-h-[1.75rem] flex items-center">
+          @if (isLoadingStats) {
+            <span class="inline-block w-16 h-5 bg-zinc-200 animate-pulse rounded"></span>
+          } @else {
+            <span>{{ totalProducts | number:'1.0-0' }}{{ totalProducts > 0 ? '+' : '' }}</span>
+          }
+        </div>
         <div class="text-xs text-zinc-500 mt-0.5">
           Produk aktif & terverifikasi
         </div>
@@ -107,7 +113,13 @@
         class="p-4 rounded-xl border border-zinc-200/80 bg-white/80 shadow-2xs"
       >
         <div class="text-xs font-medium text-zinc-500">Seller Aktif</div>
-        <div class="text-xl font-bold text-zinc-900 mt-1">1,200+</div>
+        <div class="text-xl font-bold text-zinc-900 mt-1 min-h-[1.75rem] flex items-center">
+          @if (isLoadingStats) {
+            <span class="inline-block w-14 h-5 bg-zinc-200 animate-pulse rounded"></span>
+          } @else {
+            <span>{{ totalSellers | number:'1.0-0' }}{{ totalSellers > 0 ? '+' : '' }}</span>
+          }
+        </div>
         <div class="text-xs text-zinc-500 mt-0.5">UMKM & Brand Resmi</div>
       </div>
       <div
