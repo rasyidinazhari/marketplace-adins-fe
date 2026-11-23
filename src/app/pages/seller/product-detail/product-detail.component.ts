@@ -4,7 +4,12 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Observable, forkJoin, of } from 'rxjs';
-import { CategoryItem, SellerProduct, StoreSummary, UpdateProductPayload } from '../../../models/product.model';
+import {
+  CategoryItem,
+  SellerProduct,
+  StoreSummary,
+  UpdateProductPayload,
+} from '../../../models/product.model';
 import { ProductService } from '../../../services/product/product.service';
 import { SellerStoreScopeService } from '../../../services/store/seller-store-scope.service';
 
@@ -59,7 +64,11 @@ export class ProductDetailComponent implements OnInit {
 
     if (id !== null) {
       const productId = Number(id);
-      if (!/^\d+$/.test(id) || !Number.isSafeInteger(productId) || productId <= 0) {
+      if (
+        !/^\d+$/.test(id) ||
+        !Number.isSafeInteger(productId) ||
+        productId <= 0
+      ) {
         this.loadError = 'ID produk tidak valid.';
         return;
       }
@@ -79,34 +88,40 @@ export class ProductDetailComponent implements OnInit {
 
     const productId = this.productId;
     const categories$ = this.productService.getCategories();
-    const stores$ = productId === null ? this.productService.getSellerStores() : of([]);
-    const product$ = productId === null ? of(null) : this.productService.getSellerProductById(productId);
+    const stores$ =
+      productId === null ? this.productService.getSellerStores() : of([]);
+    const product$ =
+      productId === null
+        ? of(null)
+        : this.productService.getSellerProductById(productId);
 
-    forkJoin({ categories: categories$, stores: stores$, product: product$ }).subscribe({
-      next: ({ categories, stores, product }) => {
-        this.categories = categories;
-        this.stores = stores;
-        if (product) {
-          this.fillEditForm(product);
-        } else if (this.isEditMode) {
-          this.loadError = 'Produk tidak tersedia.';
-        } else {
-          this.priceDisplay = '';
-          const dashboardStore = stores.find(store => store.id === this.dashboardStoreControl?.value);
-          this.productForm.controls.storeId.reset({
-            value: dashboardStore?.id ?? (stores.length === 1 ? stores[0].id : null),
-            disabled: stores.length === 0,
-          });
-        }
-        this.isLoading = false;
-      },
-      error: (error: HttpErrorResponse) => {
-        this.loadError = error.status === 404 && this.isEditMode
-          ? 'Produk tidak ditemukan atau tidak tersedia untuk akun ini.'
-          : 'Gagal memuat data formulir produk. Coba lagi.';
-        this.isLoading = false;
-      },
-    });
+    forkJoin({ categories: categories$, stores: stores$, product: product$ })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: ({ categories, stores, product }) => {
+          this.categories = categories;
+          this.stores = stores;
+          if (product) {
+            this.fillEditForm(product);
+          } else if (this.isEditMode) {
+            this.loadError = 'Produk tidak tersedia.';
+          } else {
+            this.priceDisplay = '';
+            this.productForm.controls.storeId.reset({
+              value: stores.length === 1 ? stores[0].id : null,
+              disabled: stores.length === 0,
+            });
+          }
+          this.isLoading = false;
+        },
+        error: (error: HttpErrorResponse) => {
+          this.loadError =
+            error.status === 404 && this.isEditMode
+              ? 'Produk tidak ditemukan atau tidak tersedia untuk akun ini.'
+              : 'Gagal memuat data formulir produk. Coba lagi.';
+          this.isLoading = false;
+        },
+      });
   }
 
   onPriceInput(event: Event): void {
@@ -126,20 +141,23 @@ export class ProductDetailComponent implements OnInit {
     this.priceDisplay = fraction === undefined ? formattedInteger : `${formattedInteger},${fraction}`;
     input.value = this.priceDisplay;
 
-    const numericValue = Number(`${integerPart}.${fraction ?? ''}`);
-    this.productForm.controls.price.setValue(Number.isFinite(numericValue) ? numericValue : null);
+    const numericValue = Number(digitsOnly);
+    this.productForm.controls.price.setValue(
+      Number.isSafeInteger(numericValue) ? numericValue : null,
+    );
   }
 
   setCategory(categoryId: number, selected: boolean): void {
     const categoryIds = this.productForm.controls.categoryIds;
     const updatedIds = selected
       ? [...categoryIds.value, categoryId]
-      : categoryIds.value.filter(id => id !== categoryId);
+      : categoryIds.value.filter((id) => id !== categoryId);
     categoryIds.setValue(updatedIds);
   }
 
   saveProduct(): void {
-    if (this.isLoading || this.isSaving || this.loadError || this.hasConflict) return;
+    if (this.isLoading || this.isSaving || this.loadError || this.hasConflict)
+      return;
 
     this.errorMessage = '';
     const payload = this.buildProductPayload();
@@ -155,36 +173,46 @@ export class ProductDetailComponent implements OnInit {
       return;
     }
 
-    this.createProduct(payload);
-  }
-
-  private createProduct(payload: UpdateProductPayload): void {
-    const { productName, productPrice, productStock, productDescription, categoryIds } = payload;
-    const storeId = this.productForm.controls.storeId.value;
-    if (storeId === null || !this.stores.some(store => store.id === storeId)) {
-      this.errorMessage = 'Pilih toko untuk produk ini.';
-      return;
-    }
-    if (
-      productName === undefined || productPrice === undefined ||
-      productStock === undefined || categoryIds === undefined
-    ) {
-      return;
-    }
-
-    this.save(this.productService.createProduct({
-      storeId,
+    const {
       productName,
       productPrice,
       productStock,
       productDescription,
       categoryIds,
-    }));
+    } = payload;
+    const storeId = this.productForm.controls.storeId.value;
+    if (
+      storeId === null ||
+      !this.stores.some((store) => store.id === storeId)
+    ) {
+      this.errorMessage = 'Pilih toko untuk produk ini.';
+      return;
+    }
+    if (
+      productName === undefined ||
+      productPrice === undefined ||
+      productStock === undefined ||
+      categoryIds === undefined
+    ) {
+      return;
+    }
+
+    this.save(
+      this.productService.createProduct({
+        storeId,
+        productName,
+        productPrice,
+        productStock,
+        productDescription,
+        categoryIds,
+      }),
+    );
   }
 
   private fillEditForm(product: SellerProduct): void {
     this.storeName = product.store?.storeName || `Toko #${product.storeId}`;
-    const categoryIds = product.productCategories?.map(relation => relation.categoryId) ?? [];
+    const categoryIds =
+      product.productCategories?.map((relation) => relation.categoryId) ?? [];
     const priceValue = product.productPrice ?? null;
 
     this.originalForm = {
@@ -213,7 +241,23 @@ export class ProductDetailComponent implements OnInit {
       error: (error: HttpErrorResponse) => {
         this.isSaving = false;
         this.hasConflict = error.status === 409;
-        this.errorMessage = this.getSaveErrorMessage(error);
+        if (this.hasConflict) {
+          this.errorMessage =
+            'Data produk sudah berubah. Muat ulang data produk sebelum menyimpan lagi.';
+        } else if (error.status === 400) {
+          const errors = error.error?.errors as
+            | Record<string, string[]>
+            | undefined;
+          this.errorMessage =
+            error.error?.message ||
+            Object.values(errors ?? {}).flat()[0] ||
+            'Periksa kembali data produk.';
+        } else if (error.status === 404) {
+          this.errorMessage =
+            'Produk atau toko sudah tidak tersedia untuk akun ini.';
+        } else {
+          this.errorMessage = 'Gagal menyimpan produk. Coba lagi.';
+        }
       },
     });
   }
@@ -243,40 +287,59 @@ export class ProductDetailComponent implements OnInit {
 
     // An edit validates only fields being sent so existing values can be left as they are.
     if (!original || name !== original.name.trim()) {
-      if (name.length < 5) return this.invalidForm('Nama produk minimal 5 karakter.');
+      if (name.length < 5)
+        return this.invalidForm('Nama produk minimal 5 karakter.');
       payload.productName = name;
     }
 
     if (!original || description !== original.description.trim()) {
-      const needsMinimumLength = description.length > 0 || original !== null;
-      if (needsMinimumLength && description.length < 25) {
-        return this.invalidForm('Deskripsi produk minimal 25 karakter jika diubah atau diisi.');
+      if (
+        (description.length > 0 || original !== null) &&
+        description.length < 25
+      ) {
+        return this.invalidForm(
+          'Deskripsi produk minimal 25 karakter jika diubah atau diisi.',
+        );
       }
       if (description) payload.productDescription = description;
     }
 
     if (!original || price !== original.price) {
-      const invalidPrice = price === null || !Number.isFinite(price) || price < 1_000 || price > 9_999_999_999.99;
-      if (invalidPrice) {
-        return this.invalidForm('Harga produk harus antara Rp 1.000 dan Rp 9.999.999.999,99.');
+      if (
+        price === null ||
+        !Number.isFinite(price) ||
+        price < 1000 ||
+        price > 9999999999.99
+      ) {
+        return this.invalidForm(
+          'Harga produk harus antara Rp 1.000 dan Rp 9.999.999.999,99.',
+        );
       }
       payload.productPrice = price;
     }
 
     if (!original || stock !== original.stock) {
-      const invalidStock = stock === null || !Number.isInteger(stock) || stock < 0 || stock > 2_147_483_647;
-      if (invalidStock) {
-        return this.invalidForm('Stok harus berupa bilangan bulat dari 0 sampai 2.147.483.647.');
+      if (
+        stock === null ||
+        !Number.isInteger(stock) ||
+        stock < 0 ||
+        stock > 2147483647
+      ) {
+        return this.invalidForm(
+          'Stok harus berupa bilangan bulat dari 0 sampai 2.147.483.647.',
+        );
       }
       payload.productStock = stock;
       if (original) payload.expectedStock = original.stock;
     }
 
-    const categoriesChanged = !original
-      || categoryIds.length !== original.categoryIds.length
-      || categoryIds.some(id => !original.categoryIds.includes(id));
+    const categoriesChanged =
+      !original ||
+      categoryIds.length !== original.categoryIds.length ||
+      categoryIds.some((id) => !original.categoryIds.includes(id));
     if (categoriesChanged) {
-      if (categoryIds.length === 0) return this.invalidForm('Pilih minimal satu kategori.');
+      if (categoryIds.length === 0)
+        return this.invalidForm('Pilih minimal satu kategori.');
       payload.categoryIds = categoryIds;
     }
 

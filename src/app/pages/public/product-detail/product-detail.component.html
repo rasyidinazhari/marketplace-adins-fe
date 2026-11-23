@@ -173,7 +173,7 @@
             {{ product.category }}
           </span>
           <span>•</span>
-          <span>Terjual {{ product.salesCount }}+ item</span>
+          <span>Terjual {{ product.salesCount }} item</span>
         </div>
 
         <h1
@@ -185,7 +185,9 @@
         <div class="flex items-center gap-4 text-xs">
           <div class="flex items-center gap-1.5 text-amber-500 font-bold">
             <span>★</span>
-            <span class="text-zinc-900 text-sm">{{ product.rating }}</span>
+            <span class="text-zinc-900 text-sm">{{
+              product.rating || "0"
+            }}</span>
           </div>
           <span class="text-zinc-300">•</span>
           <span
@@ -193,8 +195,6 @@
           >
             {{ product.ratingCount }} Penilaian Pembeli
           </span>
-          <span class="text-zinc-300">•</span>
-          <span class="text-zinc-600"> 45 Diskusi </span>
         </div>
       </div>
 
@@ -206,18 +206,18 @@
           <div class="text-3xl font-black text-zinc-950">
             Rp {{ product.price | number: "1.0-0" }}
           </div>
-          <div class="text-sm text-zinc-400 line-through">
+          <!-- <div class="text-sm text-zinc-400 line-through">
             Rp {{ product.originalPrice | number: "1.0-0" }}
-          </div>
-          <span
+          </div> -->
+          <!-- <span
             class="rounded-full bg-red-50 text-red-700 border border-red-200 text-xs font-bold px-2 py-0.5"
           >
             Hemat Rp
             {{ product.originalPrice - product.price | number: "1.0-0" }}
-          </span>
+          </span> -->
         </div>
         <div class="text-xs text-zinc-500 flex items-center gap-1.5 pt-1">
-          <svg
+          <!-- <svg
             class="w-3.5 h-3.5 text-emerald-600"
             fill="none"
             stroke="currentColor"
@@ -229,8 +229,8 @@
               stroke-width="2"
               d="M5 13l4 4L19 7"
             />
-          </svg>
-          <span>Tersedia cicilan 0% mulai dari Rp 125.000 / bulan</span>
+          </svg> -->
+          <!-- <span>Tersedia cicilan 0% mulai dari Rp 125.000 / bulan</span> -->
         </div>
       </div>
 
@@ -290,44 +290,60 @@
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
         <button
           (click)="addToCart()"
-          class="w-full inline-flex items-center justify-center gap-2 rounded-md border border-zinc-300 bg-white px-5 py-3 text-sm font-semibold text-zinc-900 shadow-2xs hover:bg-zinc-50 transition-all hover:scale-[1.01] active:scale-[0.99]"
+          [disabled]="isAddingToCart || isBuyingNow || product.stock <= 0"
+          class="w-full inline-flex items-center justify-center gap-2 rounded-md border border-zinc-300 bg-white px-5 py-3 text-sm font-semibold text-zinc-900 shadow-2xs hover:bg-zinc-50 transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
         >
-          <svg
-            class="w-4 h-4 text-zinc-700"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
-            />
-          </svg>
-          <span>{{
-            addedToCartFeedback ? "✓ Ditambahkan!" : "+ Tambah ke Keranjang"
-          }}</span>
+          @if (isAddingToCart) {
+            <svg class="animate-spin h-4 w-4 text-zinc-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+            </svg>
+            <span>Menambahkan...</span>
+          } @else {
+            <svg
+              class="w-4 h-4 text-zinc-700"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
+              />
+            </svg>
+            <span>{{ product.stock <= 0 ? 'Stok Habis' : '+ Tambah ke Keranjang' }}</span>
+          }
         </button>
 
         <button
           (click)="buyNow()"
-          class="w-full inline-flex items-center justify-center gap-2 rounded-md bg-zinc-900 px-5 py-3 text-sm font-semibold text-zinc-50 shadow-sm hover:bg-zinc-800 transition-all hover:scale-[1.01] active:scale-[0.99]"
+          [disabled]="isAddingToCart || isBuyingNow || product.stock <= 0"
+          class="w-full inline-flex items-center justify-center gap-2 rounded-md bg-zinc-900 px-5 py-3 text-sm font-semibold text-zinc-50 shadow-sm hover:bg-zinc-800 transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
         >
-          <span>Beli Sekarang</span>
-          <svg
-            class="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M14 5l7 7m0 0l-7 7m7-7H3"
-            />
-          </svg>
+          @if (isBuyingNow) {
+            <svg class="animate-spin h-4 w-4 text-zinc-100" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+            </svg>
+            <span>Memproses...</span>
+          } @else {
+            <span>Beli Sekarang</span>
+            <svg
+              class="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M14 5l7 7m0 0l-7 7m7-7H3"
+              />
+            </svg>
+          }
         </button>
       </div>
 
@@ -472,7 +488,9 @@
               Rating Keseluruhan
             </div>
             <div class="flex items-baseline gap-2">
-              <span class="text-4xl font-black text-zinc-950">{{ reviewStats.averageRating || '0.0' }}</span>
+              <span class="text-4xl font-black text-zinc-950">{{
+                reviewStats.averageRating || "0.0"
+              }}</span>
               <span class="text-zinc-400 text-sm">/ 5.0</span>
             </div>
             <div class="flex items-center text-amber-500 text-base">★★★★★</div>
@@ -490,24 +508,60 @@
 
         <!-- Loading State -->
         @if (isLoadingReviews) {
-          <div class="py-12 flex flex-col items-center justify-center gap-3 text-zinc-400">
-            <svg class="w-6 h-6 animate-spin text-zinc-600" fill="none" viewBox="0 0 24 24">
-              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+          <div
+            class="py-12 flex flex-col items-center justify-center gap-3 text-zinc-400"
+          >
+            <svg
+              class="w-6 h-6 animate-spin text-zinc-600"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                class="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                stroke-width="4"
+              ></circle>
+              <path
+                class="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8v8H4z"
+              ></path>
             </svg>
             <span class="text-xs">Memuat ulasan produk...</span>
           </div>
         } @else if (reviews.length === 0) {
           <!-- Empty State -->
-          <div class="py-12 text-center space-y-3 border border-dashed border-zinc-200 rounded-xl bg-zinc-50/50">
-            <div class="w-12 h-12 mx-auto rounded-full bg-zinc-100 flex items-center justify-center text-zinc-400">
-              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>
+          <div
+            class="py-12 text-center space-y-3 border border-dashed border-zinc-200 rounded-xl bg-zinc-50/50"
+          >
+            <div
+              class="w-12 h-12 mx-auto rounded-full bg-zinc-100 flex items-center justify-center text-zinc-400"
+            >
+              <svg
+                class="w-6 h-6"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="1.5"
+                  d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"
+                />
               </svg>
             </div>
             <div class="space-y-1">
-              <p class="text-sm font-semibold text-zinc-900">Belum ada ulasan untuk produk ini</p>
-              <p class="text-xs text-zinc-500">Ulasan akan muncul di sini setelah pembeli menyelesaikan pesanan.</p>
+              <p class="text-sm font-semibold text-zinc-900">
+                Belum ada ulasan untuk produk ini
+              </p>
+              <p class="text-xs text-zinc-500">
+                Ulasan akan muncul di sini setelah pembeli menyelesaikan
+                pesanan.
+              </p>
             </div>
           </div>
         } @else {
@@ -544,7 +598,9 @@
                   </div>
                 </div>
 
-                <p class="text-xs text-zinc-600 leading-relaxed whitespace-pre-line">
+                <p
+                  class="text-xs text-zinc-600 leading-relaxed whitespace-pre-line"
+                >
                   "{{ review.comment }}"
                 </p>
 
@@ -636,7 +692,108 @@
       }
     </div>
   </div>
-</main>
 
+  <!-- Floating Cart Success Notification (Option A: Tokopedia / Shopee Style) -->
+  @if (showCartSuccessToast) {
+    <div
+      class="fixed bottom-6 right-6 z-50 max-w-sm sm:max-w-md w-full bg-white rounded-2xl border border-zinc-200 shadow-2xl p-4 transition-all duration-300"
+    >
+      <div class="flex items-start gap-3">
+        <div class="h-9 w-9 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center justify-between">
+            <h4 class="text-sm font-bold text-zinc-950">Berhasil Masuk Keranjang!</h4>
+            <button
+              (click)="closeCartToast()"
+              class="text-zinc-400 hover:text-zinc-700 transition-colors p-1 -mr-1"
+              title="Tutup"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          <p class="text-xs text-zinc-600 mt-1 line-clamp-1 font-medium">{{ product.name }}</p>
+          <p class="text-xs text-zinc-400 mt-0.5">{{ quantity }} barang • Total Rp {{ totalPrice | number: '1.0-0' }}</p>
+          
+          <div class="flex items-center gap-2 mt-3 pt-2 border-t border-zinc-100">
+            <a
+              [routerLink]="'/cart'"
+              class="flex-1 text-center py-2 px-3 rounded-lg bg-zinc-950 hover:bg-zinc-800 text-white text-xs font-semibold shadow-xs transition-colors"
+            >
+              Lihat Keranjang
+            </a>
+            <button
+              (click)="closeCartToast()"
+              class="py-2 px-3 rounded-lg border border-zinc-200 hover:bg-zinc-50 text-zinc-700 text-xs font-semibold transition-colors"
+            >
+              Lanjut Belanja
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Auth Required Modal Dialog -->
+  @if (showAuthModal) {
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-950/60 backdrop-blur-xs">
+      <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-zinc-200 text-center">
+        <div class="mx-auto w-12 h-12 rounded-full bg-zinc-100 flex items-center justify-center text-zinc-700 mb-4">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+          </svg>
+        </div>
+        <h3 class="text-base font-bold text-zinc-950">Masuk Terlebih Dahulu</h3>
+        <p class="text-xs text-zinc-500 mt-1.5 leading-relaxed">
+          Silakan masuk ke akun pembeli Anda untuk menambahkan barang ke keranjang atau melanjutkan transaksi belanja.
+        </p>
+        <div class="mt-5 space-y-2">
+          <button
+            (click)="navigateToLogin()"
+            class="w-full py-2.5 px-4 rounded-xl bg-zinc-950 hover:bg-zinc-800 text-white text-sm font-semibold shadow-xs transition-colors"
+          >
+            Masuk Sekarang
+          </button>
+          <button
+            (click)="closeAuthModal()"
+            class="w-full py-2 px-4 rounded-xl text-zinc-600 hover:text-zinc-900 text-xs font-medium transition-colors"
+          >
+            Nanti Saja
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Seller Role Warning Modal -->
+  @if (showSellerWarningModal) {
+    <div class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-950/60 backdrop-blur-xs">
+      <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-zinc-200 text-center">
+        <div class="mx-auto w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 mb-4">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+        </div>
+        <h3 class="text-base font-bold text-zinc-950">Akun Penjual Terdeteksi</h3>
+        <p class="text-xs text-zinc-500 mt-1.5 leading-relaxed">
+          Akun Anda terdaftar sebagai Mitra Penjual (Seller). Penjual tidak dapat melakukan pembelian produk. Silakan gunakan akun Pembeli untuk berbelanja.
+        </p>
+        <div class="mt-5">
+          <button
+            (click)="closeSellerWarningModal()"
+            class="w-full py-2.5 px-4 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-white text-sm font-semibold transition-colors"
+          >
+            Mengerti
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</main>
 
 <app-compact-footer></app-compact-footer>

@@ -166,8 +166,8 @@ export class ProductShowcaseComponent implements OnInit {
       category: categoryName,
       price: p.productPrice,
       originalPrice: undefined,
-      rating: 4.9,
-      salesCount: 15,
+      rating: p.rating ?? 0,
+      salesCount: p.salesCount ?? 0,
       store: p.store?.storeName || p.storeName || 'Adins Official Store',
       badge: (p.productStock ?? 0) <= 5 ? 'Stok Terbatas' : undefined,
       image: this.productSvc.getProductImage(p)
