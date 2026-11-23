@@ -6,7 +6,6 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Observable, forkJoin, of } from 'rxjs';
 import { CategoryItem, SellerProduct, StoreSummary, UpdateProductPayload } from '../../../models/product.model';
 import { ProductService } from '../../../services/product/product.service';
-import { SellerStoreScopeService } from '../../../services/store/seller-store-scope.service';
 
 interface ProductFormData {
   name: string;
@@ -29,7 +28,6 @@ export class ProductDetailComponent implements OnInit {
   private productService = inject(ProductService);
   private destroyRef = inject(DestroyRef);
   private formBuilder = inject(FormBuilder);
-  private dashboardStoreControl = inject(SellerStoreScopeService, { optional: true })?.storeControl;
   private originalForm: ProductFormData | null = null;
 
   isEditMode = false;
@@ -40,12 +38,11 @@ export class ProductDetailComponent implements OnInit {
   errorMessage = '';
   hasConflict = false;
   categories: CategoryItem[] = [];
-  stores: StoreSummary[] = [];
+  store: StoreSummary | null = null;
   storeName = '';
   priceDisplay = '';
 
   productForm = this.formBuilder.group({
-    storeId: this.formBuilder.control<number | null>(null),
     name: this.formBuilder.nonNullable.control(''),
     description: this.formBuilder.nonNullable.control(''),
     price: this.formBuilder.control<number | null>(null),
@@ -85,18 +82,13 @@ export class ProductDetailComponent implements OnInit {
     forkJoin({ categories: categories$, stores: stores$, product: product$ }).subscribe({
       next: ({ categories, stores, product }) => {
         this.categories = categories;
-        this.stores = stores;
         if (product) {
           this.fillEditForm(product);
         } else if (this.isEditMode) {
           this.loadError = 'Produk tidak tersedia.';
         } else {
           this.priceDisplay = '';
-          const dashboardStore = stores.find(store => store.id === this.dashboardStoreControl?.value);
-          this.productForm.controls.storeId.reset({
-            value: dashboardStore?.id ?? (stores.length === 1 ? stores[0].id : null),
-            disabled: stores.length === 0,
-          });
+          this.store = stores[0] ?? null;
         }
         this.isLoading = false;
       },
@@ -160,9 +152,8 @@ export class ProductDetailComponent implements OnInit {
 
   private createProduct(payload: UpdateProductPayload): void {
     const { productName, productPrice, productStock, productDescription, categoryIds } = payload;
-    const storeId = this.productForm.controls.storeId.value;
-    if (storeId === null || !this.stores.some(store => store.id === storeId)) {
-      this.errorMessage = 'Pilih toko untuk produk ini.';
+    if (this.store === null) {
+      this.errorMessage = 'Akun ini belum memiliki toko.';
       return;
     }
     if (
@@ -173,7 +164,7 @@ export class ProductDetailComponent implements OnInit {
     }
 
     this.save(this.productService.createProduct({
-      storeId,
+      storeId: this.store.id,
       productName,
       productPrice,
       productStock,

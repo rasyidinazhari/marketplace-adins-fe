@@ -14,7 +14,6 @@ import { ModalComponent } from '../../../components/ui/modal/modal.component';
 import { StoreSummary } from '../../../models/product.model';
 import { CreateVoucherPayload, SellerVoucher } from '../../../models/voucher.model';
 import { ProductService } from '../../../services/product/product.service';
-import { SellerStoreScopeService } from '../../../services/store/seller-store-scope.service';
 import { VoucherService } from '../../../services/voucher/voucher.service';
 
 const MAX_VOUCHER_AMOUNT = 2_147_483_647;
@@ -72,13 +71,10 @@ export class VoucherComponent implements OnInit {
   private voucherService = inject(VoucherService);
   private destroyRef = inject(DestroyRef);
   private formBuilder = inject(FormBuilder);
-  private dashboardStoreControl = inject(SellerStoreScopeService, { optional: true })?.storeControl;
   private voucherRequests = new Subject<number | null>();
 
   readonly maxVoucherAmount = MAX_VOUCHER_AMOUNT;
   readonly maxCodeLength = MAX_CODE_LENGTH;
-
-  storeControl = this.formBuilder.control<number | null>(null);
 
   voucherForm = this.formBuilder.group({
     code: this.formBuilder.nonNullable.control('', [
@@ -106,7 +102,7 @@ export class VoucherComponent implements OnInit {
     ]),
   });
 
-  stores: StoreSummary[] = [];
+  store: StoreSummary | null = null;
   vouchers: SellerVoucher[] = [];
   isLoadingStores = false;
   isLoadingVouchers = false;
@@ -118,7 +114,7 @@ export class VoucherComponent implements OnInit {
   actionError = '';
 
   get selectedStoreId(): number | null {
-    return this.storeControl.value;
+    return this.store?.id ?? null;
   }
 
   ngOnInit(): void {
@@ -136,10 +132,6 @@ export class VoucherComponent implements OnInit {
       this.vouchers = hasValidResponse ? vouchers : [];
     });
 
-    this.storeControl.valueChanges.pipe(
-      takeUntilDestroyed(this.destroyRef),
-    ).subscribe(() => this.loadVouchers());
-
     this.loadStores();
   }
 
@@ -150,11 +142,9 @@ export class VoucherComponent implements OnInit {
     this.storeLoadFailed = false;
     this.productService.getSellerStores().subscribe({
       next: stores => {
-        this.stores = stores;
+        this.store = stores[0] ?? null;
         this.isLoadingStores = false;
-
-        const dashboardStore = stores.find(store => store.id === this.dashboardStoreControl?.value);
-        this.storeControl.setValue(dashboardStore?.id ?? (stores.length === 1 ? stores[0].id : null));
+        this.loadVouchers();
       },
       error: () => {
         this.isLoadingStores = false;

@@ -86,7 +86,7 @@ describe('ProductDetailComponent', () => {
     expect(navigate).toHaveBeenCalledWith(['/seller/products']);
   }));
 
-  it('requires a store selection when several stores are available', fakeAsync(() => {
+  it('uses the first store automatically when the API returns several stores', fakeAsync(() => {
     start();
     http.expectOne(`${apiUrl}/categories`).flush(categories);
     http.expectOne(`${apiUrl}/seller/stores`).flush([
@@ -95,21 +95,15 @@ describe('ProductDetailComponent', () => {
     ]);
     fixture.detectChanges();
     tick();
+    expect(view.textContent).toContain('Toko Seller');
+    expect(view.querySelector('select')).toBeNull();
 
     enter('product-name', 'Kabel Baru');
     enter('product-price', '2500');
     view.querySelector<HTMLInputElement>('input[type="checkbox"]')!.click();
     submit();
-    http.expectNone({ method: 'POST', url: `${apiUrl}/products` });
-    fixture.detectChanges();
-    expect(view.querySelector('[role="alert"]')?.textContent).toContain('Pilih toko');
-
-    const store = view.querySelector<HTMLSelectElement>('#product-store')!;
-    store.selectedIndex = 2;
-    store.dispatchEvent(new Event('change'));
-    submit();
     const create = http.expectOne({ method: 'POST', url: `${apiUrl}/products` });
-    expect(create.request.body.storeId).toBe(18);
+    expect(create.request.body.storeId).toBe(12);
     create.flush({});
   }));
 

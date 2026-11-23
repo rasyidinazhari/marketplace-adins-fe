@@ -3,10 +3,9 @@ import { Component, DestroyRef, OnInit, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { Observable, Subject, catchError, distinctUntilChanged, of, switchMap, timer } from 'rxjs';
+import { Observable, Subject, catchError, of, switchMap, timer } from 'rxjs';
 import { CategoryItem, SellerProduct } from '../../../models/product.model';
 import { ProductService } from '../../../services/product/product.service';
-import { SellerStoreScopeService } from '../../../services/store/seller-store-scope.service';
 
 @Component({
   selector: 'app-product-list',
@@ -18,7 +17,6 @@ import { SellerStoreScopeService } from '../../../services/store/seller-store-sc
 export class ProductListComponent implements OnInit {
   private productService = inject(ProductService);
   private destroyRef = inject(DestroyRef);
-  private storeControl = inject(SellerStoreScopeService, { optional: true })?.storeControl;
   private productRequests = new Subject<number>();
   private categoryNames = new Map<number, string>();
   private pageSize = 20;
@@ -47,11 +45,6 @@ export class ProductListComponent implements OnInit {
       this.productLoadFailed = !hasValidResponse;
       this.products = hasValidResponse ? products : [];
     });
-
-    this.storeControl?.valueChanges.pipe(
-      distinctUntilChanged(),
-      takeUntilDestroyed(this.destroyRef),
-    ).subscribe(() => this.loadProducts());
 
     this.loadCategories();
     this.loadProducts();
@@ -124,12 +117,11 @@ export class ProductListComponent implements OnInit {
   }
 
   get hasFilters(): boolean {
-    return this.searchQuery.trim().length > 0 || this.selectedCategoryId !== 0 || this.storeControl?.value != null;
+    return this.searchQuery.trim().length > 0 || this.selectedCategoryId !== 0;
   }
 
   private fetchProducts(delayMs: number): Observable<SellerProduct[] | null> {
     const { searchQuery, page, selectedCategoryId } = this;
-    const storeId = this.storeControl?.value ?? null;
     const requestStart$: Observable<unknown> = delayMs > 0 ? timer(delayMs) : of(undefined);
 
     return requestStart$.pipe(
@@ -138,7 +130,6 @@ export class ProductListComponent implements OnInit {
         page,
         this.pageSize,
         selectedCategoryId,
-        storeId,
       )),
       catchError(() => of(null)),
     );
