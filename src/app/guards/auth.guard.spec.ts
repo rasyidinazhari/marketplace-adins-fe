@@ -50,28 +50,42 @@ describe('Route access', () => {
     for (const path of ['/cart', '/checkout', '/buyer/orders', '/buyer/orders/1']) {
       await expectRoute(path, '/buyer/login');
     }
-    await expectRoute('/seller/vouchers', '/seller/login');
+    for (const path of ['/seller', '/seller/products/new', '/seller/orders/1', '/seller/vouchers']) {
+      await expectRoute(path, '/seller/login');
+    }
     await expectRoute('/login', '/buyer/login');
     await expectRoute('/register');
+    await expectRoute('/');
     await expectRoute('/products');
+    await expectRoute('/products/1');
     await expectRoute('/missing-page', '/not-found');
   });
 
   it('allows buyer routes and redirects seller and guest-only routes home', async () => {
     restoreSession('Buyer');
+    await expectRoute('/');
     await expectRoute('/checkout');
     await expectRoute('/buyer/orders/1');
-    await expectRoute('/seller/products/new', '/');
+    for (const path of ['/seller', '/seller/products/new', '/seller/orders/1', '/seller/vouchers']) {
+      await expectRoute(path, '/');
+    }
     await expectRoute('/seller/login', '/');
     await expectRoute('/login', '/');
     await expectRoute('/register', '/');
+    await expectRoute('/products');
+    await expectRoute('/products/1');
   });
 
-  it('allows sellers into their dashboard and public catalog and rechecks child navigation', async () => {
+  it('keeps sellers in their dashboard and rechecks access on child navigation', async () => {
     restoreSession('Seller');
     await expectRoute('/seller', '/seller/products');
-    await expectRoute('/cart', '/');
-    await expectRoute('/products/1');
+    expect(harness.routeNativeElement!.querySelector('a[href="/"], a[href="/products"]')).toBeNull();
+    for (const path of ['/', '/products', '/products/1', '/cart', '/checkout', '/buyer/orders', '/buyer/orders/1']) {
+      await expectRoute(path, '/seller/products');
+    }
+    for (const path of ['/buyer/login', '/seller/login', '/register']) {
+      await expectRoute(path, '/seller/products');
+    }
     await expectRoute('/seller/vouchers');
     restoreSession('Seller', -1);
     await expectRoute('/seller/orders', '/seller/login');

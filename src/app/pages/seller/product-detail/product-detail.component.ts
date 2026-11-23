@@ -11,6 +11,7 @@ import {
   UpdateProductPayload,
 } from '../../../models/product.model';
 import { ProductService } from '../../../services/product/product.service';
+import { SellerStoreScopeService } from '../../../services/store/seller-store-scope.service';
 
 interface ProductFormData {
   name: string;
@@ -28,11 +29,12 @@ interface ProductFormData {
   styleUrl: './product-detail.component.css',
 })
 export class ProductDetailComponent implements OnInit {
-  private readonly router = inject(Router);
-  private readonly route = inject(ActivatedRoute);
-  private readonly productService = inject(ProductService);
-  private readonly destroyRef = inject(DestroyRef);
-  private readonly formBuilder = inject(FormBuilder);
+  private router = inject(Router);
+  private route = inject(ActivatedRoute);
+  private productService = inject(ProductService);
+  private destroyRef = inject(DestroyRef);
+  private formBuilder = inject(FormBuilder);
+  private dashboardStoreControl = inject(SellerStoreScopeService, { optional: true })?.storeControl;
   private originalForm: ProductFormData | null = null;
 
   isEditMode = false;
@@ -47,7 +49,7 @@ export class ProductDetailComponent implements OnInit {
   storeName = '';
   priceDisplay = '';
 
-  readonly productForm = this.formBuilder.group({
+  productForm = this.formBuilder.group({
     storeId: this.formBuilder.control<number | null>(null),
     name: this.formBuilder.nonNullable.control(''),
     description: this.formBuilder.nonNullable.control(''),
@@ -124,18 +126,20 @@ export class ProductDetailComponent implements OnInit {
 
   onPriceInput(event: Event): void {
     const input = event.target as HTMLInputElement;
-    const digitsOnly = input.value.replace(/\D/g, '');
+    const [integerDigits, decimalDigits] = input.value.replace(/[^\d,]/g, '').split(',', 2);
 
-    if (!digitsOnly) {
+    if (!integerDigits && decimalDigits === undefined) {
       this.priceDisplay = '';
       input.value = '';
       this.productForm.controls.price.setValue(null);
       return;
     }
 
-    const formatted = digitsOnly.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-    this.priceDisplay = formatted;
-    input.value = formatted;
+    const integerPart = integerDigits || '0';
+    const fraction = decimalDigits?.slice(0, 2);
+    const formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    this.priceDisplay = fraction === undefined ? formattedInteger : `${formattedInteger},${fraction}`;
+    input.value = this.priceDisplay;
 
     const numericValue = Number(digitsOnly);
     this.productForm.controls.price.setValue(
@@ -159,12 +163,13 @@ export class ProductDetailComponent implements OnInit {
     const payload = this.buildProductPayload();
     if (!payload) return;
 
-    if (this.productId !== null) {
+    const productId = this.productId;
+    if (productId !== null) {
       if (Object.keys(payload).length === 0) {
         this.errorMessage = 'Belum ada perubahan untuk disimpan.';
         return;
       }
-      this.save(this.productService.updateProduct(this.productId, payload));
+      this.save(this.productService.updateProduct(productId, payload));
       return;
     }
 
@@ -223,8 +228,7 @@ export class ProductDetailComponent implements OnInit {
 
   private formatRupiahNumber(value: number | null): string {
     if (value === null || !Number.isFinite(value)) return '';
-    const integerPart = Math.trunc(value).toString();
-    return integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    return value.toLocaleString('id-ID', { maximumFractionDigits: 2 });
   }
 
   private save(request: Observable<unknown>): void {
@@ -256,6 +260,21 @@ export class ProductDetailComponent implements OnInit {
         }
       },
     });
+  }
+
+  private getSaveErrorMessage(error: HttpErrorResponse): string {
+    switch (error.status) {
+      case 409:
+        return 'Data produk sudah berubah. Muat ulang data produk sebelum menyimpan lagi.';
+      case 400: {
+        const errors = error.error?.errors as Record<string, string[]> | undefined;
+        return error.error?.message || Object.values(errors ?? {}).flat()[0] || 'Periksa kembali data produk.';
+      }
+      case 404:
+        return 'Produk atau toko sudah tidak tersedia untuk akun ini.';
+      default:
+        return 'Gagal menyimpan produk. Coba lagi.';
+    }
   }
 
   private buildProductPayload(): UpdateProductPayload | null {

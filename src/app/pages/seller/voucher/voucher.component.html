@@ -87,8 +87,8 @@
                     </span>
                   </th>
                   <td class="whitespace-nowrap p-4 font-semibold text-zinc-900">{{ voucher.discountPercentage }}%</td>
-                  <td class="whitespace-nowrap p-4 text-zinc-700">Rp {{ voucher.minPurchaseAmount | number: '1.0-0' }}</td>
-                  <td class="whitespace-nowrap p-4 text-zinc-700">Rp {{ voucher.maxDiscountAmount | number: '1.0-0' }}</td>
+                  <td class="whitespace-nowrap p-4 text-zinc-700">Rp {{ formatRupiah(voucher.minPurchaseAmount) }}</td>
+                  <td class="whitespace-nowrap p-4 text-zinc-700">Rp {{ formatRupiah(voucher.maxDiscountAmount) }}</td>
                   <td class="p-4">
                     <span
                       class="whitespace-nowrap rounded-full border px-2.5 py-0.5 text-[10px] font-semibold"
@@ -133,58 +133,98 @@
   [closeOnBackdrop]="!isSaving"
   [closeOnEscape]="!isSaving"
 >
-  <form [formGroup]="voucherForm" (ngSubmit)="createVoucher()">
+  <form [formGroup]="voucherForm" (ngSubmit)="createVoucher()" novalidate>
     <fieldset [disabled]="isSaving" class="space-y-4">
+
+      <!-- Kode Voucher -->
       <div>
         <label for="voucher-code" class="mb-1 block text-xs font-semibold text-zinc-800">Kode Voucher</label>
         <input
           id="voucher-code"
           type="text"
           formControlName="code"
-          maxlength="100"
-          required
-          class="w-full rounded-md border border-zinc-200 px-3 py-2 font-mono text-xs"
+          [attr.maxlength]="maxCodeLength"
+          (blur)="markTouched('code')"
+          [attr.aria-invalid]="fieldError('code') ? true : null"
+          [class.border-red-500]="fieldError('code')"
+          [class.border-zinc-200]="!fieldError('code')"
+          class="w-full rounded-md border px-3 py-2 font-mono text-xs"
         />
+        @if (fieldError('code'); as message) {
+          <p role="alert" class="mt-1 text-[11px] text-red-600">{{ message }}</p>
+        }
       </div>
+
+      <!-- Diskon -->
       <div>
         <label for="voucher-percentage" class="mb-1 block text-xs font-semibold text-zinc-800">Diskon (%)</label>
         <input
           id="voucher-percentage"
           type="number"
+          inputmode="numeric"
           formControlName="discountPercentage"
-          min="1"
-          max="100"
           step="1"
-          required
-          class="w-full rounded-md border border-zinc-200 px-3 py-2 text-xs"
+          (blur)="markTouched('discountPercentage')"
+          [attr.aria-invalid]="fieldError('discountPercentage') ? true : null"
+          [class.border-red-500]="fieldError('discountPercentage')"
+          [class.border-zinc-200]="!fieldError('discountPercentage')"
+          class="w-full rounded-md border px-3 py-2 text-xs"
         />
+        @if (fieldError('discountPercentage'); as message) {
+          <p role="alert" class="mt-1 text-[11px] text-red-600">{{ message }}</p>
+        }
       </div>
+
+      <!-- Min. Belanja -->
       <div>
         <label for="voucher-min-purchase" class="mb-1 block text-xs font-semibold text-zinc-800">Min. Belanja (Rp)</label>
-        <input
-          id="voucher-min-purchase"
-          type="number"
-          formControlName="minPurchaseAmount"
-          min="0"
-          [max]="maxVoucherAmount"
-          step="1"
-          required
-          class="w-full rounded-md border border-zinc-200 px-3 py-2 text-xs"
-        />
+        <div class="relative">
+          <span class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-xs font-medium text-zinc-500">Rp</span>
+          <input
+            id="voucher-min-purchase"
+            type="text"
+            inputmode="numeric"
+            autocomplete="off"
+            [value]="formatRupiah(voucherForm.controls.minPurchaseAmount.value)"
+            (input)="onRupiahInput($event, 'minPurchaseAmount')"
+            (blur)="markTouched('minPurchaseAmount')"
+            placeholder="0"
+            [attr.aria-invalid]="fieldError('minPurchaseAmount') ? true : null"
+            [class.border-red-500]="fieldError('minPurchaseAmount')"
+            [class.border-zinc-200]="!fieldError('minPurchaseAmount')"
+            class="w-full rounded-md border py-2 pl-9 pr-3 text-xs"
+          />
+        </div>
+        @if (fieldError('minPurchaseAmount'); as message) {
+          <p role="alert" class="mt-1 text-[11px] text-red-600">{{ message }}</p>
+        }
       </div>
+
+      <!-- Maks. Potongan -->
       <div>
         <label for="voucher-max-discount" class="mb-1 block text-xs font-semibold text-zinc-800">Maks. Potongan (Rp)</label>
-        <input
-          id="voucher-max-discount"
-          type="number"
-          formControlName="maxDiscountAmount"
-          min="1"
-          [max]="maxVoucherAmount"
-          step="1"
-          required
-          class="w-full rounded-md border border-zinc-200 px-3 py-2 text-xs"
-        />
+        <div class="relative">
+          <span class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-xs font-medium text-zinc-500">Rp</span>
+          <input
+            id="voucher-max-discount"
+            type="text"
+            inputmode="numeric"
+            autocomplete="off"
+            [value]="formatRupiah(voucherForm.controls.maxDiscountAmount.value)"
+            (input)="onRupiahInput($event, 'maxDiscountAmount')"
+            (blur)="markTouched('maxDiscountAmount')"
+            placeholder="Contoh: 50.000"
+            [attr.aria-invalid]="fieldError('maxDiscountAmount') ? true : null"
+            [class.border-red-500]="fieldError('maxDiscountAmount')"
+            [class.border-zinc-200]="!fieldError('maxDiscountAmount')"
+            class="w-full rounded-md border py-2 pl-9 pr-3 text-xs"
+          />
+        </div>
+        @if (fieldError('maxDiscountAmount'); as message) {
+          <p role="alert" class="mt-1 text-[11px] text-red-600">{{ message }}</p>
+        }
       </div>
+
     </fieldset>
 
     @if (createError) {

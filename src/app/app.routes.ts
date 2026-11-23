@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { authGuard, loggedOutGuard } from './guards/auth.guard';
+import { authGuard, loggedOutGuard, storefrontGuard } from './guards/auth.guard';
 
 // Public Pages
 import { LandingComponent } from './pages/public/landing/landing.component';
@@ -32,16 +32,19 @@ export const routes: Routes = [
   // Public
   {
     path: '',
+    canActivate: [storefrontGuard],
     component: LandingComponent,
     title: 'WarungAdins - Marketplace Modern'
   },
   {
     path: 'products',
+    canActivate: [storefrontGuard],
     component: ProductsComponent,
     title: 'Katalog Produk - WarungAdins'
   },
   {
     path: 'products/:id',
+    canActivate: [storefrontGuard],
     component: PublicProductDetailComponent,
     title: 'Detail Produk - WarungAdins'
   },
@@ -58,11 +61,6 @@ export const routes: Routes = [
     canActivate: [loggedOutGuard],
     component: SellerLoginComponent,
     title: 'Portal Mitra Penjual - WarungAdins'
-  },
-  {
-    path: 'login',
-    redirectTo: 'buyer/login',
-    pathMatch: 'full'
   },
   {
     path: 'register',

@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 
@@ -9,4 +9,6 @@ import { RouterLink } from '@angular/router';
   templateUrl: './compact-footer.component.html',
   styleUrl: './compact-footer.component.css'
 })
-export class CompactFooterComponent {}
+export class CompactFooterComponent {
+  @Input() showCatalogLink = true;
+}

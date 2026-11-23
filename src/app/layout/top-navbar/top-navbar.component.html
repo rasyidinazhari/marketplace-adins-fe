@@ -151,7 +151,7 @@
         </div>
       </div> -->
 
-      <!-- Action Items: Cart, Orders, Auth -->
+      <!-- Action Items: Cart, Auth, Account -->
       <div class="flex items-center gap-2">
         <!-- Cart Button -->
         <a
@@ -263,29 +263,22 @@
               />
             </svg>
           </button>
-          <div
-            id="navbar-account-panel"
-            [hidden]="!isAccountMenuOpen"
-            class="absolute right-0 z-50 mt-1 w-40 rounded-lg border border-zinc-200 bg-white p-1 shadow-lg"
-          >
-            <button
-              type="button"
-              (click)="logout()"
-              class="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-xs font-medium text-zinc-700 transition-colors hover:bg-zinc-100 hover:text-zinc-950"
-            >
-              <svg
-                aria-hidden="true"
-                class="h-4 w-4 text-zinc-500"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M10 17l5-5-5-5m5 5H3m9-8h7a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-7"
-                />
+          <div id="navbar-account-panel" [hidden]="!isAccountMenuOpen"
+               class="absolute right-0 z-50 mt-1 w-40 rounded-lg border border-zinc-200 bg-white p-1 shadow-lg">
+            <ng-container *ngIf="currentRole === 'Buyer'">
+              <a [routerLink]="'/buyer/orders'" (click)="isAccountMenuOpen = false"
+                 class="flex items-center gap-2 rounded-md px-2.5 py-2 text-xs font-medium text-zinc-700 transition-colors hover:bg-zinc-100 hover:text-zinc-950">
+                <svg aria-hidden="true" class="h-4 w-4 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
+                Pesanan Saya
+              </a>
+              <hr class="my-1 border-zinc-200" />
+            </ng-container>
+            <button type="button" (click)="logout()"
+                    class="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-xs font-medium text-zinc-700 transition-colors hover:bg-zinc-100 hover:text-zinc-950">
+              <svg aria-hidden="true" class="h-4 w-4 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 17l5-5-5-5m5 5H3m9-8h7a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-7" />
               </svg>
               Keluar
             </button>
@@ -345,41 +338,13 @@
         class="w-full px-3 py-2 text-sm bg-zinc-100 rounded-md border border-zinc-200 focus:outline-none"
       />
     </div>
-    <div class="grid grid-cols-2 gap-2 text-sm font-medium">
-      <a
-        [routerLink]="'/'"
-        (click)="isMobileMenuOpen = false"
-        class="p-2 rounded-md hover:bg-zinc-100 text-zinc-700"
-        >Beranda</a
-      >
-      <a
-        *ngIf="currentRole !== 'Seller'"
-        [routerLink]="'/products'"
-        (click)="isMobileMenuOpen = false"
-        class="p-2 rounded-md hover:bg-zinc-100 text-zinc-700"
-        >Katalog Produk</a
-      >
-      <a
-        *ngIf="currentRole === 'Buyer'"
-        [routerLink]="'/cart'"
-        (click)="isMobileMenuOpen = false"
-        class="p-2 rounded-md hover:bg-zinc-100 text-zinc-700"
-        >Keranjang</a
-      >
-      <a
-        *ngIf="currentRole === 'Buyer'"
-        [routerLink]="'/buyer/orders'"
-        (click)="isMobileMenuOpen = false"
-        class="p-2 rounded-md hover:bg-zinc-100 text-zinc-700"
-        >Pesanan Saya</a
-      >
+    <div *ngIf="currentRole !== 'Seller'" class="grid grid-cols-2 gap-2 text-sm font-medium">
+      <a [routerLink]="'/'" (click)="isMobileMenuOpen=false" class="p-2 rounded-md hover:bg-zinc-100 text-zinc-700">Beranda</a>
+      <a [routerLink]="'/products'" (click)="isMobileMenuOpen=false" class="p-2 rounded-md hover:bg-zinc-100 text-zinc-700">Katalog Produk</a>
+      <a *ngIf="currentRole === 'Buyer'" [routerLink]="'/cart'" (click)="isMobileMenuOpen=false" class="p-2 rounded-md hover:bg-zinc-100 text-zinc-700">Keranjang</a>
     </div>
-    <div *ngIf="currentRole === 'Seller'" class="border-t border-zinc-100 pt-2">
-      <p
-        class="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-1"
-      >
-        Area Penjual
-      </p>
+    <div *ngIf="currentRole === 'Seller'">
+      <p class="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-1">Area Penjual</p>
       <div class="grid grid-cols-3 gap-1 text-xs">
         <a
           [routerLink]="'/seller/products'"

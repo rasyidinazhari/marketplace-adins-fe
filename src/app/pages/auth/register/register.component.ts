@@ -1,17 +1,70 @@
 import { Component, inject, ChangeDetectorRef } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { RouterLink, Router } from '@angular/router';
-import { FormsModule } from '@angular/forms';
+import {
+  AbstractControl,
+  FormBuilder,
+  ReactiveFormsModule,
+  ValidationErrors,
+  ValidatorFn,
+  Validators,
+} from '@angular/forms';
 import { switchMap, of, map } from 'rxjs';
 import { RegisterService } from '../../../services/register/register.service';
 import { StoreService } from '../../../services/store/store.service';
 import { RegisterRequest, RegisterResponse, UserRole } from '../../../models/register.model';
 import { StoreRequest, StoreResponse } from '../../../models/store.model';
 
+const MIN_PASSWORD_LENGTH = 6;
+const MIN_STORE_NAME_LENGTH = 5;
+
+type RegisterField = 'fullName' | 'storeName' | 'email' | 'password' | 'confirmPassword' | 'agreeTerms';
+
+/** Tidak boleh kosong atau hanya spasi. */
+const notBlank: ValidatorFn = (control: AbstractControl): ValidationErrors | null =>
+  typeof control.value === 'string' && control.value.trim() === '' ? { required: true } : null;
+
+/** Panjang minimum setelah di-trim (untuk nama toko). */
+const minTrimmedLength = (min: number): ValidatorFn => (control: AbstractControl): ValidationErrors | null => {
+  const value = typeof control.value === 'string' ? control.value.trim() : '';
+  return value.length === 0 || value.length >= min ? null : { minlength: true };
+};
+
+/** Validator level form: password dan konfirmasi harus sama. */
+const passwordsMatch: ValidatorFn = (group: AbstractControl): ValidationErrors | null => {
+  const password = group.get('password')?.value;
+  const confirmPassword = group.get('confirmPassword')?.value;
+  return confirmPassword && password !== confirmPassword ? { mismatch: true } : null;
+};
+
+const FIELD_MESSAGES: Record<RegisterField, Record<string, string>> = {
+  fullName: {
+    required: 'Nama wajib diisi.',
+  },
+  storeName: {
+    required: 'Nama toko resmi wajib diisi untuk penjual.',
+    minlength: `Nama toko resmi minimal ${MIN_STORE_NAME_LENGTH} karakter.`,
+  },
+  email: {
+    required: 'Email wajib diisi.',
+    email: 'Format email tidak valid.',
+  },
+  password: {
+    required: 'Kata sandi wajib diisi.',
+    minlength: `Kata sandi minimal ${MIN_PASSWORD_LENGTH} karakter.`,
+  },
+  confirmPassword: {
+    required: 'Ulangi kata sandi wajib diisi.',
+    mismatch: 'Konfirmasi kata sandi tidak cocok.',
+  },
+  agreeTerms: {
+    required: 'Anda harus menyetujui Syarat & Ketentuan terlebih dahulu.',
+  },
+};
+
 @Component({
   selector: 'app-register',
   standalone: true,
-  imports: [CommonModule, RouterLink, FormsModule],
+  imports: [RouterLink, ReactiveFormsModule],
   templateUrl: './register.component.html',
   styleUrl: './register.component.css'
 })
@@ -20,14 +73,23 @@ export class RegisterComponent {
   private registerSvc = inject(RegisterService);
   private storeSvc = inject(StoreService);
   private cdr = inject(ChangeDetectorRef);
+  private formBuilder = inject(FormBuilder);
+
+  readonly minPasswordLength = MIN_PASSWORD_LENGTH;
 
   role: UserRole = 'Buyer';
-  fullName = '';
-  storeName = '';
-  email = '';
-  password = '';
-  confirmPassword = '';
-  agreeTerms = false;
+
+  registerForm = this.formBuilder.nonNullable.group(
+    {
+      fullName: ['', [Validators.required, notBlank]],
+      storeName: [''], // validator ditambahkan saat role = Seller
+      email: ['', [Validators.required, Validators.email]],
+      password: ['', [Validators.required, Validators.minLength(MIN_PASSWORD_LENGTH)]],
+      confirmPassword: ['', [Validators.required]],
+      agreeTerms: [false, [Validators.requiredTrue]],
+    },
+    { validators: passwordsMatch },
+  );
 
   isLoading = false;
   loadingText = 'Mendaftarkan akun...';
@@ -35,58 +97,68 @@ export class RegisterComponent {
   successMessage = '';
 
   selectRole(selectedRole: UserRole): void {
+    if (this.isLoading) return;
+
     this.role = selectedRole;
     this.errorMessage = '';
     this.successMessage = '';
+
+    const storeNameControl = this.registerForm.controls.storeName;
+    if (selectedRole === 'Seller') {
+      storeNameControl.setValidators([
+        Validators.required,
+        notBlank,
+        minTrimmedLength(MIN_STORE_NAME_LENGTH),
+      ]);
+    } else {
+      storeNameControl.clearValidators();
+      storeNameControl.reset('');
+    }
+    storeNameControl.updateValueAndValidity();
+  }
+
+  // --- VALIDASI FORM ---
+
+  /** Pesan error untuk satu kolom. String kosong jika valid atau belum disentuh. */
+  fieldError(field: RegisterField): string {
+    const control = this.registerForm.controls[field];
+    if (!control.touched) return '';
+
+    const messages = FIELD_MESSAGES[field];
+    const errors = { ...(control.errors ?? {}) } as Record<string, unknown>;
+
+    // Error "mismatch" ada di level form, bukan di kontrol konfirmasi.
+    if (field === 'confirmPassword' && this.registerForm.errors?.['mismatch']) {
+      errors['mismatch'] = true;
+    }
+
+    const key = Object.keys(messages).find(errorKey => errors[errorKey]);
+    return key ? messages[key] : '';
   }
 
   onSubmit(): void {
     this.errorMessage = '';
     this.successMessage = '';
 
+    if (this.registerForm.invalid) {
+      this.registerForm.markAllAsTouched();
+      return;
+    }
+
     const normalizedRole: UserRole = this.role === 'Seller' ? 'Seller' : 'Buyer';
-    const trimmedStoreName = this.storeName.trim();
-
-    if (!this.fullName.trim() || !this.email.trim() || !this.password) {
-      this.errorMessage = 'Nama, email, dan kata sandi wajib diisi.';
-      return;
-    }
-
-    if (normalizedRole === 'Seller') {
-      if (!trimmedStoreName) {
-        this.errorMessage = 'Nama toko resmi wajib diisi untuk penjual.';
-        return;
-      }
-      if (trimmedStoreName.length < 5) {
-        this.errorMessage = 'Nama toko resmi minimal 5 karakter.';
-        return;
-      }
-    }
-
-    if (this.password.length < 6) {
-      this.errorMessage = 'Kata sandi minimal 6 karakter.';
-      return;
-    }
-
-    if (this.password !== this.confirmPassword) {
-      this.errorMessage = 'Konfirmasi kata sandi tidak cocok.';
-      return;
-    }
-
-    if (!this.agreeTerms) {
-      this.errorMessage = 'Anda harus menyetujui Syarat & Ketentuan terlebih dahulu.';
-      return;
-    }
+    const { fullName, storeName, email, password } = this.registerForm.getRawValue();
+    const trimmedStoreName = storeName.trim();
 
     const registerPayload: RegisterRequest = {
-      name: this.fullName.trim(),
-      email: this.email.trim(),
-      password: this.password,
+      name: fullName.trim(),
+      email: email.trim(),
+      password,
       role: normalizedRole
     };
 
     this.isLoading = true;
     this.loadingText = 'Mendaftarkan akun...';
+    this.registerForm.disable({ emitEvent: false });
 
     this.registerSvc.submitRegister(registerPayload).pipe(
       switchMap((registerRes: RegisterResponse) => {
@@ -127,6 +199,7 @@ export class RegisterComponent {
       },
       error: (err) => {
         this.isLoading = false;
+        this.registerForm.enable({ emitEvent: false });
         console.error('Gagal proses registrasi/pembuatan toko:', err);
 
         if (err.status === 0) {

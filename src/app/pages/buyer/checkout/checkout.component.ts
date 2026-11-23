@@ -1,7 +1,8 @@
-import { Component, OnInit, inject, ChangeDetectorRef } from '@angular/core';
+import { Component, DestroyRef, OnInit, inject, ChangeDetectorRef } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
-import { RouterLink, Router } from '@angular/router';
-import { FormsModule } from '@angular/forms';
+import { ActivatedRoute, RouterLink, Router } from '@angular/router';
+import { FormBuilder, ReactiveFormsModule, ValidationErrors, ValidatorFn, AbstractControl, Validators } from '@angular/forms';
 import { TopNavbarComponent } from '../../../layout/top-navbar/top-navbar.component';
 import { CompactFooterComponent } from '../../../layout/compact-footer/compact-footer.component';
 import { ModalComponent } from '../../../components/ui/modal/modal.component';
@@ -14,6 +15,42 @@ import { AddressPayload, AddressResponse } from '../../../models/address.model';
 import { OrderPayload, UpdateOrderStatusPayload } from '../../../models/order.model';
 import { SellerVoucher } from '../../../models/voucher.model';
 
+const CENTS_PER_RUPIAH = 100;
+
+// Aturan validasi alamat
+const DIGITS_ONLY = /^\d+$/;
+const PHONE_MIN_LENGTH = 9;
+const PHONE_MAX_LENGTH = 15;
+const POSTAL_CODE_LENGTH = 5;
+
+type AddressField = 'name' | 'phone' | 'city' | 'postalCode' | 'address';
+type DigitsField = 'phone' | 'postalCode';
+
+/** Tidak boleh kosong atau hanya spasi. */
+const notBlank: ValidatorFn = (control: AbstractControl): ValidationErrors | null =>
+  typeof control.value === 'string' && control.value.trim() === '' ? { required: true } : null;
+
+const ADDRESS_MESSAGES: Record<AddressField, Record<string, string>> = {
+  name: {
+    required: 'Nama penerima wajib diisi.',
+  },
+  phone: {
+    required: 'Nomor telepon wajib diisi.',
+    pattern: 'Nomor telepon hanya boleh berisi angka.',
+    minlength: `Nomor telepon harus ${PHONE_MIN_LENGTH}-${PHONE_MAX_LENGTH} digit.`,
+    maxlength: `Nomor telepon harus ${PHONE_MIN_LENGTH}-${PHONE_MAX_LENGTH} digit.`,
+  },
+  city: {},
+  postalCode: {
+    pattern: 'Kode pos hanya boleh berisi angka.',
+    minlength: `Kode pos harus ${POSTAL_CODE_LENGTH} digit.`,
+    maxlength: `Kode pos harus ${POSTAL_CODE_LENGTH} digit.`,
+  },
+  address: {
+    required: 'Alamat lengkap wajib diisi.',
+  },
+};
+
 export interface AddressItem {
   id: number;
   name: string;
@@ -21,25 +58,25 @@ export interface AddressItem {
   address: string;
   city: string;
   postalCode: string;
-  label: string;
-  isPrimary?: boolean;
 }
 
 export interface CheckoutItem {
-  id?: number;
-  productId: number;
+  id: number;
   name: string;
-  price: number;
+  currentTotalPrice: number | null;
   qty: number;
   image: string;
-  storeId: number;
-  storeName?: string;
+}
+
+interface CheckoutVoucher extends SellerVoucher {
+  discountInCents: number;
+  shortfallInCents: number;
 }
 
 @Component({
   selector: 'app-checkout',
   standalone: true,
-  imports: [CommonModule, RouterLink, FormsModule, TopNavbarComponent, CompactFooterComponent, ModalComponent],
+  imports: [CommonModule, RouterLink, ReactiveFormsModule, TopNavbarComponent, CompactFooterComponent, ModalComponent],
   templateUrl: './checkout.component.html',
   styleUrl: './checkout.component.css'
 })
@@ -47,23 +84,36 @@ export class CheckoutComponent implements OnInit {
   private cartSvc = inject(CartService);
   private orderSvc = inject(OrderService);
   private addressSvc = inject(AddressService);
-  private voucherSvc = inject(VoucherService);
+  private voucherService = inject(VoucherService);
   private cdr = inject(ChangeDetectorRef);
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
+  private destroyRef = inject(DestroyRef);
+  private fb = inject(FormBuilder);
+  private currentSubtotalInCents: number | null = null;
+  private selectedVoucherId: number | null = null;
+  private currentStoreId: number | null = null;
 
-  selectedCourier = 'reguler';
-  selectedPayment = 'bca_va';
+  readonly phoneMaxLength = PHONE_MAX_LENGTH;
+  readonly postalCodeLength = POSTAL_CODE_LENGTH;
+
+  currentStoreName = '';
+  cartMessage = '';
+  availableVouchers: CheckoutVoucher[] = [];
+  unavailableVouchers: CheckoutVoucher[] = [];
+  isLoadingVouchers = false;
+  voucherLoadFailed = false;
+  isVoucherModalOpen = false;
+
   isProcessing = false;
   isLoadingCart = false;
   isLoadingAddress = false;
 
-  // Voucher State
-  availableVouchers: SellerVoucher[] = [];
-  isLoadingVouchers = false;
-  isVoucherModalOpen = false;
-  selectedVoucher: SellerVoucher | null = null;
-  currentStoreName = '';
-  currentStoreId = 0;
+  // Pilihan kurir & metode pembayaran
+  optionsForm = this.fb.nonNullable.group({
+    courier: ['reguler'],
+    payment: ['bca_va'],
+  });
 
   // Modal Ubah Alamat State
   isAddressModalOpen = false;
@@ -81,18 +131,26 @@ export class CheckoutComponent implements OnInit {
     address: 'Silakan pilih alamat pengiriman terlebih dahulu',
     city: '',
     postalCode: '',
-    label: '',
   };
 
-  newAddressForm = {
-    name: '',
-    phone: '',
-    label: 'Rumah',
-    city: '',
-    postalCode: '',
-    address: '',
-    isPrimary: false
-  };
+  // Form alamat baru
+  addressForm = this.fb.nonNullable.group({
+    name: ['', [Validators.required, notBlank]],
+    phone: ['', [
+      Validators.required,
+      Validators.pattern(DIGITS_ONLY),
+      Validators.minLength(PHONE_MIN_LENGTH),
+      Validators.maxLength(PHONE_MAX_LENGTH),
+    ]],
+    city: [''],
+    // Opsional, tetapi jika diisi harus 5 digit angka.
+    postalCode: ['', [
+      Validators.pattern(DIGITS_ONLY),
+      Validators.minLength(POSTAL_CODE_LENGTH),
+      Validators.maxLength(POSTAL_CODE_LENGTH),
+    ]],
+    address: ['', [Validators.required, notBlank]],
+  });
 
   couriers = [
     { id: 'reguler', name: 'JNE Reguler', eta: '2 - 3 Hari', price: 15000 },
@@ -108,85 +166,149 @@ export class CheckoutComponent implements OnInit {
 
   orderItems: CheckoutItem[] = [];
 
+  get selectedCourier(): string {
+    return this.optionsForm.controls.courier.value;
+  }
+
+  get selectedPayment(): string {
+    return this.optionsForm.controls.payment.value;
+  }
+
   ngOnInit(): void {
     this.loadCartData();
     this.loadAddresses();
   }
 
+  // --- PILIHAN KURIR & PEMBAYARAN ---
+  selectCourier(id: string): void {
+    if (this.isProcessing) return;
+    this.optionsForm.controls.courier.setValue(id);
+  }
+
+  selectPayment(id: string): void {
+    if (this.isProcessing) return;
+    this.optionsForm.controls.payment.setValue(id);
+  }
+
   // --- 1. FETCH CART ---
   loadCartData(): void {
+    if (this.isLoadingCart || this.isProcessing) return;
+
     this.isLoadingCart = true;
-    this.cartSvc.getCartItems().subscribe({
+    this.cartMessage = '';
+    this.orderItems = [];
+    this.currentStoreId = null;
+    this.currentStoreName = '';
+    this.currentSubtotalInCents = null;
+    this.selectedVoucherId = null;
+    this.availableVouchers = [];
+    this.unavailableVouchers = [];
+    this.voucherLoadFailed = false;
+
+    this.cartSvc.getCartItems().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: (response: CartItemResponse[]) => {
-        const selectedIds = this.cartSvc.getSelectedCartItemIds();
-        const filteredResponse = selectedIds.length > 0
-          ? response.filter(item => selectedIds.includes(item.id))
-          : response;
-
-        this.orderItems = filteredResponse.map(item => ({
-          id: item.id,
-          productId: item.productId,
-          name: item.productName,
-          price: item.totalPrice / item.quantity,
-          qty: item.quantity,
-          image: this.cartSvc.defaultPlaceholder,
-          storeId: item.storeId,
-          storeName: item.storeName || 'Toko'
-        }));
-
-        if (this.orderItems.length > 0) {
-          this.currentStoreId = this.orderItems[0].storeId;
-          this.currentStoreName = this.orderItems[0].storeName || 'Toko';
-          this.loadStoreVouchers(this.currentStoreId);
+        this.isLoadingCart = false;
+        const items = response ?? [];
+        if (items.length === 0) {
+          this.cartMessage = 'Keranjang Anda kosong.';
+          return;
         }
 
-        this.isLoadingCart = false;
-        this.cdr.detectChanges();
+        const storeParam = this.route.snapshot.queryParamMap.get('storeId');
+        if (storeParam === null && new Set(items.map(item => item.storeId)).size > 1) {
+          this.cartMessage = 'Pilih satu toko dari keranjang untuk melanjutkan checkout.';
+          return;
+        }
+
+        const storeId = storeParam === null ? items[0].storeId : Number(storeParam);
+        const storeItems = items.filter(item => item.storeId === storeId);
+        if (!Number.isSafeInteger(storeId) || storeId <= 0 || storeItems.length === 0) {
+          this.cartMessage = 'Tidak ada barang dari toko ini di keranjang.';
+          return;
+        }
+
+        this.currentStoreId = storeId;
+        this.currentStoreName = storeItems[0].storeName;
+        this.orderItems = storeItems.map(item => ({
+          id: item.id,
+          name: item.productName,
+          currentTotalPrice: item.currentTotalPrice ?? null,
+          qty: item.quantity,
+          image: this.cartSvc.defaultPlaceholder,
+        }));
+        this.prepareVouchers(storeItems);
       },
       error: (err) => {
         console.error('Gagal mengambil data keranjang', err);
+        this.cartMessage = 'Gagal memuat data keranjang.';
         this.isLoadingCart = false;
-      }
-    });
-  }
-
-  // --- 2. FETCH STORE VOUCHERS ---
-  loadStoreVouchers(storeId: number): void {
-    this.isLoadingVouchers = true;
-    this.voucherSvc.getVouchers(storeId).subscribe({
-      next: (vouchers) => {
-        // Hanya ambil voucher yang aktif milik toko ini
-        this.availableVouchers = (vouchers || []).filter(v => v.isActive);
-        // Jika voucher yang sudah dipilih tidak ada lagi di daftar aktif, lepas
-        if (this.selectedVoucher && !this.availableVouchers.some(v => v.id === this.selectedVoucher!.id)) {
-          this.selectedVoucher = null;
-        }
-        this.isLoadingVouchers = false;
-        this.cdr.detectChanges();
       },
-      error: (err) => {
-        console.error('Gagal mengambil voucher toko', err);
-        this.availableVouchers = [];
-        this.isLoadingVouchers = false;
-        this.cdr.detectChanges();
-      }
     });
   }
 
-  // --- 3. FETCH ADDRESSES ---
+  private prepareVouchers(items: CartItemResponse[]): void {
+    let subtotalInCents = 0;
+    for (const item of items) {
+      const total = item.currentTotalPrice;
+      if (total == null || total < 0) return;
+      subtotalInCents += Math.round(total * CENTS_PER_RUPIAH);
+    }
+
+    this.currentSubtotalInCents = subtotalInCents;
+    this.loadVouchers();
+  }
+
+  loadVouchers(): void {
+    const storeId = this.currentStoreId;
+    const subtotalInCents = this.currentSubtotalInCents;
+    if (storeId === null || subtotalInCents === null || this.isLoadingVouchers) return;
+
+    this.isLoadingVouchers = true;
+    this.voucherLoadFailed = false;
+    this.voucherService.getVouchers(storeId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: vouchers => {
+        this.setVoucherOptions(vouchers ?? [], subtotalInCents);
+        this.isLoadingVouchers = false;
+      },
+      error: () => {
+        this.isLoadingVouchers = false;
+        this.voucherLoadFailed = true;
+      },
+    });
+  }
+
+  private setVoucherOptions(vouchers: SellerVoucher[], subtotalInCents: number): void {
+    const activeVouchers = vouchers.filter(voucher => voucher.isActive);
+    const voucherOptions = activeVouchers.map(voucher => {
+      const calculatedDiscountInCents = Math.round(subtotalInCents * voucher.discountPercentage / 100);
+      const maxDiscountInCents = voucher.maxDiscountAmount * CENTS_PER_RUPIAH;
+      const minPurchaseInCents = voucher.minPurchaseAmount * CENTS_PER_RUPIAH;
+
+      return {
+        ...voucher,
+        discountInCents: Math.min(calculatedDiscountInCents, maxDiscountInCents),
+        shortfallInCents: Math.max(minPurchaseInCents - subtotalInCents, 0),
+      };
+    });
+
+    this.availableVouchers = voucherOptions.filter(voucher => voucher.shortfallInCents === 0)
+      .sort((first, second) => second.discountInCents - first.discountInCents);
+    this.unavailableVouchers = voucherOptions.filter(voucher => voucher.shortfallInCents > 0)
+      .sort((first, second) => first.shortfallInCents - second.shortfallInCents);
+  }
+
+  // --- 2. FETCH ADDRESSES ---
   loadAddresses(): void {
     this.isLoadingAddress = true;
     this.addressSvc.getAllAddresses().subscribe({
       next: (response: AddressResponse[]) => {
-        this.savedAddresses = response.map(a => ({
+        this.savedAddresses = (response ?? []).map(a => ({
           id: a.id,
           name: a.recipientName,
           phone: a.phoneNumber,
           address: a.fullAddress,
           city: a.city,
           postalCode: a.postalCode,
-          label: 'Alamat',
-          isPrimary: false
         }));
 
         if (this.savedAddresses.length > 0) {
@@ -204,8 +326,36 @@ export class CheckoutComponent implements OnInit {
     });
   }
 
+  get canChooseVoucher(): boolean {
+    return this.currentSubtotalInCents !== null;
+  }
+
+  get canPay(): boolean {
+    return this.currentStoreId !== null && this.canChooseVoucher && !this.isLoadingAddress
+      && !this.isLoadingVouchers && !this.isProcessing && !this.isVoucherModalOpen;
+  }
+
+  get voucherOptions(): CheckoutVoucher[] {
+    return [...this.availableVouchers, ...this.unavailableVouchers];
+  }
+
+  get selectedVoucher(): CheckoutVoucher | undefined {
+    return this.availableVouchers.find(voucher => voucher.id === this.selectedVoucherId);
+  }
+
+  applyVoucher(voucher: CheckoutVoucher): void {
+    if (voucher.shortfallInCents > 0 || this.isProcessing) return;
+
+    this.selectedVoucherId = voucher.id;
+    this.isVoucherModalOpen = false;
+  }
+
+  removeVoucher(): void {
+    this.selectedVoucherId = null;
+  }
+
   get subtotal(): number {
-    return this.orderItems.reduce((acc, item) => acc + (item.price * item.qty), 0);
+    return (this.currentSubtotalInCents ?? 0) / CENTS_PER_RUPIAH;
   }
 
   get currentShippingCost(): number {
@@ -213,45 +363,14 @@ export class CheckoutComponent implements OnInit {
     return courier ? courier.price : 15000;
   }
 
-  // Perhitungan Diskon Voucher Toko (Maksimal 1 Voucher per Order)
-  get voucherDiscount(): number {
-    if (!this.selectedVoucher) return 0;
-    const rawDiscount = Math.round((this.subtotal * this.selectedVoucher.discountPercentage) / 100);
-    return Math.min(rawDiscount, this.selectedVoucher.maxDiscountAmount);
-  }
-
   get grandTotal(): number {
-    return Math.max(0, this.subtotal - this.voucherDiscount);
-  }
-
-  // --- FUNGSI MODAL & SELEKSI VOUCHER ---
-  openVoucherModal(): void {
-    this.isVoucherModalOpen = true;
-  }
-
-  closeVoucherModal(): void {
-    this.isVoucherModalOpen = false;
-  }
-
-  isVoucherEligible(voucher: SellerVoucher): boolean {
-    return voucher.isActive && this.subtotal >= voucher.minPurchaseAmount;
-  }
-
-  applyVoucher(voucher: SellerVoucher): void {
-    if (!this.isVoucherEligible(voucher)) return;
-    this.selectedVoucher = voucher;
-    this.closeVoucherModal();
-  }
-
-  removeVoucher(): void {
-    this.selectedVoucher = null;
+    return ((this.currentSubtotalInCents ?? 0) - (this.selectedVoucher?.discountInCents ?? 0)) / CENTS_PER_RUPIAH;
   }
 
   processPayment(): void {
-    if (this.orderItems.length === 0) {
-      alert('Keranjang Anda kosong.');
-      return;
-    }
+    const storeId = this.currentStoreId;
+    if (storeId === null || !this.canPay) return;
+
     if (this.shippingAddress.id === 0) {
       alert('Silakan pilih alamat pengiriman terlebih dahulu.');
       this.openAddressModal();
@@ -260,20 +379,17 @@ export class CheckoutComponent implements OnInit {
 
     this.isProcessing = true;
 
-    const storeId = this.orderItems[0].storeId;
-
     const payload: OrderPayload = {
-      storeId: storeId,
-      addressId: this.shippingAddress.id,
-      voucherId: this.selectedVoucher ? this.selectedVoucher.id : null,
-      voucherCode: this.selectedVoucher ? this.selectedVoucher.code : null
+      storeId,
+      addressId: this.shippingAddress.id
     };
+    const voucher = this.selectedVoucher;
+    if (voucher) payload.voucherId = voucher.id;
 
     const statusPayload: UpdateOrderStatusPayload = { status: 'ON_PROCESS' };
 
     this.orderSvc.createOrder(payload).subscribe({
       next: (res) => {
-        this.cartSvc.clearSelectedCartItemIds();
         this.orderSvc.updateOrderStatus(res.id, statusPayload).subscribe({
           next: () => {
             this.isProcessing = false;
@@ -290,6 +406,7 @@ export class CheckoutComponent implements OnInit {
         this.isProcessing = false;
         console.error('Gagal membuat pesanan', err);
         alert(err.error?.message || 'Gagal memproses pembayaran. Silakan coba lagi.');
+        if (err.status === 400 || err.status === 409) this.loadCartData();
       }
     });
   }
@@ -319,41 +436,69 @@ export class CheckoutComponent implements OnInit {
 
   switchToNewAddress(): void {
     this.addressMode = 'form';
-    this.newAddressForm = {
-      name: '', phone: '', label: 'Rumah', city: '', postalCode: '', address: '', isPrimary: false
-    };
+    this.addressForm.reset();
   }
 
   switchToSelectAddress(): void {
     this.addressMode = 'select';
   }
 
+  // --- VALIDASI FORM ALAMAT ---
+
+  /** Hapus semua karakter non-angka saat user mengetik / paste. */
+  onDigitsInput(event: Event, field: DigitsField): void {
+    const input = event.target as HTMLInputElement;
+    const cleaned = input.value.replace(/\D/g, '');
+    if (input.value !== cleaned) {
+      input.value = cleaned;
+    }
+    this.addressForm.controls[field].setValue(cleaned);
+  }
+
+  /** Pesan error untuk satu kolom. String kosong jika valid atau belum disentuh. */
+  addressError(field: AddressField): string {
+    const control = this.addressForm.controls[field];
+    if (!control.invalid || !control.touched) return '';
+
+    const errors = control.errors ?? {};
+    const messages = ADDRESS_MESSAGES[field];
+    const key = Object.keys(messages).find(errorKey => errors[errorKey]);
+    return key ? messages[key] : 'Nilai tidak valid.';
+  }
+
   // --- SIMPAN ALAMAT BARU KE API ---
   saveNewAddress(): void {
-    if (!this.newAddressForm.name || !this.newAddressForm.phone || !this.newAddressForm.address) {
-      alert('Silakan lengkapi nama penerima, nomor telepon, dan alamat lengkap.');
+    if (this.isProcessing) return;
+
+    if (this.addressForm.invalid) {
+      this.addressForm.markAllAsTouched();
       return;
     }
 
+    const form = this.addressForm.getRawValue();
     const payload: AddressPayload = {
       userId: 1, // Abaikan
-      recipientName: this.newAddressForm.name,
-      phoneNumber: this.newAddressForm.phone,
-      city: this.newAddressForm.city || 'Jakarta',
-      postalCode: this.newAddressForm.postalCode || '10110',
-      note: this.newAddressForm.address
+      recipientName: form.name.trim(),
+      phoneNumber: form.phone,
+      city: form.city.trim() || 'Jakarta',
+      postalCode: form.postalCode || '10110',
+      note: form.address.trim()
     };
 
     this.isProcessing = true;
+    this.addressForm.disable({ emitEvent: false });
+
     this.addressSvc.createAddress(payload).subscribe({
-      next: (res) => {
+      next: () => {
         this.isProcessing = false;
+        this.addressForm.enable({ emitEvent: false });
         this.isAddressModalOpen = false;
         this.loadAddresses();
         alert('Alamat berhasil ditambahkan!');
       },
       error: (err) => {
         this.isProcessing = false;
+        this.addressForm.enable({ emitEvent: false });
         console.error('Gagal menyimpan alamat', err);
         alert('Gagal menyimpan alamat. Pastikan Anda sudah login.');
       }
