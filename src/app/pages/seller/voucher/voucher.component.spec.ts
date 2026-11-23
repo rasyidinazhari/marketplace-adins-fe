@@ -1,6 +1,6 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { environment } from '../../../../environments/environment';
 import { SellerVoucher } from '../../../models/voucher.model';
 import { VoucherComponent } from './voucher.component';
@@ -63,33 +63,23 @@ describe('VoucherComponent', () => {
     expect(findButton('+ Buat Voucher Baru').disabled).toBeTrue();
   });
 
-  it('waits for store selection and cancels the previous store request when the selection changes', fakeAsync(() => {
+  it('loads vouchers for the first store automatically when the API returns several stores', () => {
     fixture.detectChanges();
     http.expectOne(storesUrl).flush([firstStore, secondStore]);
-    fixture.detectChanges();
-    tick();
-    http.expectNone(req => req.url.endsWith('/vouchers'));
-
-    const select = view.querySelector<HTMLSelectElement>('#voucher-store')!;
-    select.selectedIndex = 1;
-    select.dispatchEvent(new Event('change'));
-    const firstRequest = http.expectOne({ method: 'GET', url: vouchersUrl });
-
-    select.selectedIndex = 2;
-    select.dispatchEvent(new Event('change'));
-    expect(firstRequest.cancelled).toBeTrue();
-    http.expectOne({ method: 'GET', url: `${environment.apiUrl}/stores/3/vouchers` })
-      .flush([{ ...voucher, storeId: 3, code: 'TokoDua' }]);
+    http.expectOne(vouchersUrl).flush([voucher]);
     fixture.detectChanges();
 
-    expect(view.querySelector('tbody')?.textContent).toContain('TokoDua');
-  }));
+    http.expectNone(`${environment.apiUrl}/stores/3/vouchers`);
+    expect(view.textContent).toContain(firstStore.storeName);
+    expect(view.querySelector('select')).toBeNull();
+    expect(view.querySelector('tbody')?.textContent).toContain(voucher.code);
+  });
 
   it('allows retrying a failed store request and a failed voucher request', () => {
     fixture.detectChanges();
     http.expectOne(storesUrl).flush(null, { status: 500, statusText: 'Server error' });
     fixture.detectChanges();
-    expect(view.querySelector('[role="alert"]')?.textContent).toContain('Gagal memuat daftar toko');
+    expect(view.querySelector('[role="alert"]')?.textContent).toContain('Gagal memuat toko');
 
     findButton('Coba lagi').click();
     http.expectOne(storesUrl).flush([firstStore]);
@@ -106,13 +96,9 @@ describe('VoucherComponent', () => {
 
   it('validates the form and keeps the draft after a duplicate-code conflict', () => {
     loadSingleStore([]);
-    const store = view.querySelector<HTMLSelectElement>('#voucher-store')!;
-    expect(store.selectedOptions[0].textContent).toContain(firstStore.storeName);
-    expect(store.matches(':disabled')).toBeFalse();
 
     findButton('+ Buat Voucher Baru').click();
     fixture.detectChanges();
-    expect(store.matches(':disabled')).toBeTrue();
     enterValue('voucher-code', '  PromoBaru  ');
     enterValue('voucher-percentage', '10.5');
     enterValue('voucher-max-discount', '25000');
@@ -139,7 +125,6 @@ describe('VoucherComponent', () => {
 
     expect(view.querySelector('[role="dialog"]')).toBeNull();
     expect(view.querySelector('tbody')?.textContent).toContain(voucher.code);
-    expect(store.matches(':disabled')).toBeFalse();
   });
 
   it('applies the saved status and removes a row only after a successful delete', () => {
@@ -151,13 +136,12 @@ describe('VoucherComponent', () => {
     findButton('Nonaktifkan').click();
     const update = http.expectOne({ method: 'PATCH', url: voucherUrl });
     fixture.detectChanges();
-    const store = view.querySelector<HTMLSelectElement>('#voucher-store')!;
-    expect(store.matches(':disabled')).toBeTrue();
+    expect(findButton('Hapus').disabled).toBeTrue();
     expect(update.request.body).toEqual({ isActive: false });
     expect(view.querySelector('tbody')?.textContent).toContain('Aktif');
     update.flush({ ...voucher, isActive: false });
     fixture.detectChanges();
-    expect(store.matches(':disabled')).toBeFalse();
+    expect(findButton('Hapus').disabled).toBeFalse();
     expect(view.querySelector('tbody')?.textContent).toContain('Nonaktif');
     expect(view.textContent).toContain('1 voucher · 0 aktif');
 

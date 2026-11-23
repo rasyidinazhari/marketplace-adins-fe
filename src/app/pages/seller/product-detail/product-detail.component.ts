@@ -11,7 +11,6 @@ import {
   UpdateProductPayload,
 } from '../../../models/product.model';
 import { ProductService } from '../../../services/product/product.service';
-import { SellerStoreScopeService } from '../../../services/store/seller-store-scope.service';
 
 interface ProductFormData {
   name: string;
@@ -34,7 +33,6 @@ export class ProductDetailComponent implements OnInit {
   private productService = inject(ProductService);
   private destroyRef = inject(DestroyRef);
   private formBuilder = inject(FormBuilder);
-  private dashboardStoreControl = inject(SellerStoreScopeService, { optional: true })?.storeControl;
   private originalForm: ProductFormData | null = null;
 
   isEditMode = false;
@@ -45,12 +43,11 @@ export class ProductDetailComponent implements OnInit {
   errorMessage = '';
   hasConflict = false;
   categories: CategoryItem[] = [];
-  stores: StoreSummary[] = [];
+  store: StoreSummary | null = null;
   storeName = '';
   priceDisplay = '';
 
   productForm = this.formBuilder.group({
-    storeId: this.formBuilder.control<number | null>(null),
     name: this.formBuilder.nonNullable.control(''),
     description: this.formBuilder.nonNullable.control(''),
     price: this.formBuilder.control<number | null>(null),
@@ -100,17 +97,13 @@ export class ProductDetailComponent implements OnInit {
       .subscribe({
         next: ({ categories, stores, product }) => {
           this.categories = categories;
-          this.stores = stores;
           if (product) {
             this.fillEditForm(product);
           } else if (this.isEditMode) {
             this.loadError = 'Produk tidak tersedia.';
           } else {
             this.priceDisplay = '';
-            this.productForm.controls.storeId.reset({
-              value: stores.length === 1 ? stores[0].id : null,
-              disabled: stores.length === 0,
-            });
+            this.store = stores[0] ?? null;
           }
           this.isLoading = false;
         },
@@ -181,12 +174,8 @@ export class ProductDetailComponent implements OnInit {
       productDescription,
       categoryIds,
     } = payload;
-    const storeId = this.productForm.controls.storeId.value;
-    if (
-      storeId === null ||
-      !this.stores.some((store) => store.id === storeId)
-    ) {
-      this.errorMessage = 'Pilih toko untuk produk ini.';
+    if (this.store === null) {
+      this.errorMessage = 'Akun ini belum memiliki toko.';
       return;
     }
     if (
@@ -200,7 +189,7 @@ export class ProductDetailComponent implements OnInit {
 
     this.save(
       this.productService.createProduct({
-        storeId,
+        storeId: this.store.id,
         productName,
         productPrice,
         productStock,
@@ -261,21 +250,6 @@ export class ProductDetailComponent implements OnInit {
         }
       },
     });
-  }
-
-  private getSaveErrorMessage(error: HttpErrorResponse): string {
-    switch (error.status) {
-      case 409:
-        return 'Data produk sudah berubah. Muat ulang data produk sebelum menyimpan lagi.';
-      case 400: {
-        const errors = error.error?.errors as Record<string, string[]> | undefined;
-        return error.error?.message || Object.values(errors ?? {}).flat()[0] || 'Periksa kembali data produk.';
-      }
-      case 404:
-        return 'Produk atau toko sudah tidak tersedia untuk akun ini.';
-      default:
-        return 'Gagal menyimpan produk. Coba lagi.';
-    }
   }
 
   private buildProductPayload(): UpdateProductPayload | null {

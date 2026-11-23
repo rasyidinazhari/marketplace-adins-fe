@@ -26,14 +26,8 @@ export class ProductService {
     return this.http.get<BackendProduct[]>(`${environment.apiUrl}/products`, { params });
   }
 
-  getSellerProducts(
-    search?: string, page = 1, limit = 20, categoryId = 0, storeId: number | null = null,
-  ): Observable<SellerProduct[]> {
-    let params = this.getProductParams(search, page, limit, categoryId);
-    if (storeId !== null) {
-      params = params.set('storeId', storeId);
-    }
-
+  getSellerProducts(search?: string, page = 1, limit = 20, categoryId = 0): Observable<SellerProduct[]> {
+    const params = this.getProductParams(search, page, limit, categoryId);
     return this.http.get<SellerProduct[]>(`${environment.apiUrl}/seller/products`, { params });
   }
 
