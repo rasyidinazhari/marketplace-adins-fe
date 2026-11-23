@@ -141,9 +141,10 @@ export class ProductDetailComponent implements OnInit {
     this.priceDisplay = fraction === undefined ? formattedInteger : `${formattedInteger},${fraction}`;
     input.value = this.priceDisplay;
 
-    const numericValue = Number(digitsOnly);
+    const numericString = fraction !== undefined ? `${integerPart}.${fraction}` : integerPart;
+    const numericValue = Number(numericString);
     this.productForm.controls.price.setValue(
-      Number.isSafeInteger(numericValue) ? numericValue : null,
+      Number.isFinite(numericValue) && numericValue >= 0 ? numericValue : null,
     );
   }
 
